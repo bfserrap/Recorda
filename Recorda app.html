@@ -77,8 +77,32 @@
    1) CONFIGURACIÓN — edita estas 2 líneas con tus datos reales
    Los sacas en supabase.com -> tu proyecto -> Settings -> API
    ============================================================ */
+// ==========================================
+// 1) CONFIGURACIÓN A PRUEBA DE ERRORES
+// ==========================================
+
+// Tus credenciales fijas de Supabase
 const SUPABASE_URL = "https://soizfreqyjwishczfrmc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_JLIsPY_j1xWfLgYtIKFZrw_CO15cFw8";
+
+let sb;
+
+try {
+    // Validamos que las constantes existan y no estén vacías o mal copiadas
+    if (!SUPABASE_URL || SUPABASE_URL.includes("TU-PROYECTO") || !SUPABASE_ANON_KEY.includes("sb_")) {
+        throw new Error("Las credenciales de Supabase no son válidas o están incompletas.");
+    }
+
+    // Inicialización segura del cliente de Supabase
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("¡Conexión exitosa con Supabase inicializada!");
+
+} catch (error) {
+    console.error("Error crítico de configuración:", error.message);
+    
+    // Si algo muere, la app te avisará con una alerta clara en lugar de quedarse en blanco
+    alert("🚨 ¡Cuidado! El código no pudo conectar con Supabase.\nMotivo: " + error.message + "\n\nRevisa que no hayas borrado comillas o puntos y coma al editar.");
+}
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 

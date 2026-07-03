@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>Recorda 🔔 — Tus horas y eventos, sin olvidos</title>
-<meta name="theme-color" content="#0A1414" />
+<meta name="theme-color" content="#f0f4f8" /> 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
@@ -14,12 +14,13 @@
   tailwind.config = {
     theme: {
       extend: {
-        colors: {
-          ink: { 950:'#050A0A',900:'#0A1414',800:'#0F1E1D',700:'#152B29',600:'#1D3B38' },
-          mint: { 400:'#5CF2C7',500:'#2FE3AE',600:'#17C793' },
-          coral: { 400:'#FF8A7A',500:'#FF6B54' },
-          sand: '#EFEAE0'
+                colors: {
+          ink: { 950:'#f8fafc',900:'#ffffff',800:'#f1f5f9',700:'#e2e8f0',600:'#cbd5e1' },
+          mint: { 400:'#2563eb',500:'#3b82f6',600:'#1d4ed8' },
+          coral: { 400:'#ef4444',500:'#dc2626' },
+          sand: '#0f172a'
         },
+
         fontFamily: { display:['Space Grotesk','sans-serif'], body:['Inter','sans-serif'] },
         borderRadius: { xl2:'1.5rem', xl3:'2rem' },
         boxShadow: {
@@ -36,37 +37,49 @@
 
 <style>
   html{scroll-behavior:smooth}
-  body{background-color:#0a1414;color:#eef7f4;font-family:'Inter',sans-serif;
-    background-image:radial-gradient(circle at 20% 0%, rgba(47,227,174,0.18), transparent 45%), radial-gradient(circle at 90% 10%, rgba(255,107,84,0.12), transparent 40%);
+  body{background-color:#f0f4f8;color:#0f172a;font-family:'Inter',sans-serif;
+    background-image:radial-gradient(circle at 20% 0%, rgba(37,99,235,0.15), transparent 50%), radial-gradient(circle at 90% 10%, rgba(6,182,212,0.12), transparent 45%);
     overflow-x:hidden;}
   .font-display{font-family:'Space Grotesk',sans-serif}
-  ::selection{background:#2fe3ae;color:#0a1414}
+  ::selection{background:#2563eb;color:#ffffff}
   ::-webkit-scrollbar{width:10px}
-  ::-webkit-scrollbar-track{background:#0a1414}
-  ::-webkit-scrollbar-thumb{background:#1d3b38;border-radius:999px}
-  .glass{background:rgba(255,255,255,0.04);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08)}
-  .text-gradient{background:linear-gradient(95deg,#5cf2c7 0%,#2fe3ae 45%,#a9ffe9 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;background:#2fe3ae;padding:.75rem 1.5rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#0a1414;box-shadow:0 0 0 1px rgba(47,227,174,0.15),0 20px 60px -20px rgba(47,227,174,0.35);transition:.15s}
+  ::-webkit-scrollbar-track{background:#f0f4f8}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}
+  .glass{background:rgba(255,255,255,0.7);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(0,0,0,0.06)}
+  .text-gradient{background:linear-gradient(95deg,#2563eb 0%,#06b6d4 50%,#3b82f6 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;background:#2563eb;padding:.75rem 1.5rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#ffffff;box-shadow:0 10px 25px -5px rgba(37,99,235,0.35);transition:.15s}
   .btn-primary:active{transform:scale(.96)}
-  .btn-primary:hover{background:#5cf2c7}
+  .btn-primary:hover{background:#1d4ed8}
   .btn-primary:disabled{opacity:.5;pointer-events:none}
-  .btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;padding:.75rem 1.5rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#efeae0;background:rgba(255,255,255,0.04);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);transition:.15s}
+  .btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;padding:.75rem 1.5rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#334155;background:#ffffff;border:1px solid #cbd5e1;box-shadow:0 2px 5px rgba(0,0,0,0.04);transition:.15s}
   .btn-secondary:active{transform:scale(.96)}
-  .btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;padding:.6rem 1.1rem;font-family:'Space Grotesk',sans-serif;font-size:.875rem;font-weight:500;color:rgba(239,234,224,.7);transition:.15s}
-  .btn-ghost:hover{color:#5cf2c7}
-  .card{background:rgba(255,255,255,0.04);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,0.08);border-radius:2rem;box-shadow:0 10px 40px -15px rgba(0,0,0,0.5)}
-  .input-field{width:100%;border-radius:1rem;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.05);padding:.75rem 1rem;color:#efeae0;outline:none;transition:.15s}
-  .input-field::placeholder{color:rgba(239,234,224,.3)}
-  .input-field:focus{border-color:rgba(47,227,174,.6);background:rgba(255,255,255,0.07);box-shadow:0 0 0 3px rgba(47,227,174,.15)}
-  .label-field{display:block;margin-bottom:.375rem;font-size:.875rem;font-weight:500;color:rgba(239,234,224,.6)}
-  .chip{cursor:pointer;user-select:none;border-radius:999px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);padding:.5rem 1rem;font-size:.875rem;font-weight:500;color:rgba(239,234,224,.7);transition:.15s}
-  .chip-active{border-color:rgba(47,227,174,.6);background:rgba(47,227,174,.15);color:#5cf2c7}
+  .btn-secondary:hover{background:#f8fafc;border-color:#94a3b8}
+  .btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;padding:.6rem 1.1rem;font-family:'Space Grotesk',sans-serif;font-size:.875rem;font-weight:600;color:#475569;transition:.15s}
+  .btn-ghost:hover{color:#2563eb;background:rgba(37,99,235,0.05)}
+  .card{background:#ffffff;border:1px solid rgba(0,0,0,0.06);border-radius:1.5rem;box-shadow:0 10px 30px -10px rgba(0,0,0,0.06)}
+  .input-field{width:100%;border-radius:1rem;border:1px solid #cbd5e1;background:#ffffff;padding:.75rem 1rem;color:#0f172a;outline:none;transition:.15s}
+  .input-field::placeholder{color:#94a3b8}
+  .input-field:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.15)}
+  .label-field{display:block;margin-bottom:.375rem;font-size:.875rem;font-weight:600;color:#334155}
+  .chip{cursor:pointer;user-select:none;border-radius:999px;border:1px solid #cbd5e1;background:#ffffff;padding:.5rem 1rem;font-size:.875rem;font-weight:500;color:#475569;transition:.15s}
+  .chip:hover{border-color:#2563eb;color:#2563eb}
+  .chip-active{border-color:#2563eb;background:rgba(37,99,235,0.08);color:#2563eb;font-weight:600}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
   .animate-float{animation:float 6s ease-in-out infinite}
   .view{display:none}
   .view.active{display:block}
   @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+  /* Forzar la inversión de colores oscuros heredados por las clases del Tailwind antiguo */
+  .text-sand { color: #0f172a !important; }
+  .text-sand\/60 { color: #475569 !important; }
+  .text-sand\/50 { color: #64748b !important; }
+  .text-sand\/40 { color: #94a3b8 !important; }
+  .text-sand\/30 { color: #cbd5e1 !important; }
+  .bg-ink-900\/70, .bg-ink-900\/80, .bg-ink-900\/90 { background-color: rgba(255, 255, 255, 0.85) !important; border-bottom: 1px solid #e2e8f0; }
+  .border-white\/5 { border-color: #e2e8f0 !important; }
 </style>
+
 </head>
 <body class="min-h-screen">
 
@@ -298,11 +311,11 @@ function navbar(showAuth=true){
         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-mint-500 text-lg shadow-glow">🔔</span>
         <span class="font-display text-lg font-bold tracking-tight text-sand">Recorda</span>
       </a>
-      ${showAuth ? `
-      <div class="flex items-center gap-2">
-        <a href="#login" class="btn-ghost hidden sm:inline-flex">Iniciar sesión</a>
-        <a href="#login" onclick="setTimeout(()=>document.getElementById('modo-registro')?.click(),50)" class="btn-primary !px-5 !py-2.5 text-sm">Crear cuenta gratis</a>
-      </div>` : ``}
+                ${showAuth ? `
+          <div class="flex items-center gap-2">
+            <a href="#login" class="btn-secondary !px-4 !py-2 text-sm">Iniciar sesión</a>
+            <a href="#login" onclick="setTimeout(()=>document.getElementById('modo-registro')?.click(),50)" class="btn-primary !px-4 !py-2 text-sm hidden sm:inline-flex">Crear cuenta</a>
+          </div>` : ``}
     </div>
   </header>`;
 }
@@ -648,22 +661,11 @@ function viewForm(existing){
 
         <div id="bloque-cita" class="card space-y-5 p-5 ${STATE.formTempTipo!=='cita_medica'?'hidden':''}">
           <p class="text-sm font-medium text-mint-400">🩺 Detalles de la cita</p>
-          <div class="space-y-4">
-            <div class="flex items-center justify-between">
+                      <div class="space-y-4">
               <label class="label-field !mb-0">Centro médico o clínica</label>
-              <button type="button" id="btn-manual" class="text-xs font-medium text-mint-400 hover:underline">${STATE.formManualCentro ? "Elegir de la lista" : "Escribirlo yo mismo ✍️"}</button>
+              <input id="f-centro-manual" class="input-field" placeholder="Ej: Integramédica, Clínica Dávila..." value="${esc(r.centro_medico)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
             </div>
-            <div id="centro-lista" class="grid grid-cols-1 gap-3 sm:grid-cols-2 ${STATE.formManualCentro?'hidden':''}">
-              <select id="f-region" class="input-field">
-                <option value="">Selecciona tu región</option>
-                ${CENTROS_MEDICOS_CHILE.map(reg=>`<option value="${esc(reg.region)}" ${r.region===reg.region?'selected':''}>${esc(reg.region)}</option>`).join("")}
-              </select>
-              <select id="f-centro" class="input-field">
-                <option value="">Elige una región primero</option>
-              </select>
-            </div>
-            <input id="f-centro-manual" class="input-field ${STATE.formManualCentro?'':'hidden'}" placeholder="Ej: Centro Médico Familiar Los Robles" value="${STATE.formManualCentro?esc(r.centro_medico):''}" />
-          </div>
+
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label class="label-field">Especialidad</label>
@@ -710,12 +712,25 @@ function viewForm(existing){
             <label class="label-field">Tu correo</label>
             <input id="f-email" type="email" class="input-field" placeholder="tucorreo@ejemplo.cl" value="${esc(r.email_aviso || STATE.user?.email || '')}" />
           </div>
-          <div>
+                    <div>
             <label class="label-field">¿Con cuánta anticipación te avisamos?</label>
-            <div class="flex flex-wrap gap-2" id="anticipacion-chips">
+            <div class="flex flex-wrap gap-2 mb-3" id="anticipacion-chips">
               ${ANTICIPACION_OPCIONES.map(o=>`<button type="button" data-ant="${o.valor}" class="chip ${(r.anticipacion_horas ?? 24)===o.valor?'chip-active':''}">⏰ ${o.label}</button>`).join("")}
+              <button type="button" id="btn-ant-personalizada" class="chip ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24)) ? 'chip-active' : ''}">⚙️ Elegir fecha y hora exacta</button>
+            </div>
+            
+            <div id="bloque-fecha-manual" class="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-3 p-4 bg-slate-100 rounded-xl ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24)) ? '' : 'hidden'}">
+              <div>
+                <label class="label-field text-xs">Fecha exacta del aviso</label>
+                <input id="f-fecha-aviso" type="date" class="input-field bg-white" />
+              </div>
+              <div>
+                <label class="label-field text-xs">Hora exacta del aviso</label>
+                <input id="f-hora-aviso" type="time" class="input-field bg-white" />
+              </div>
             </div>
           </div>
+
         </div>
 
         <div id="form-error" class="hidden rounded-xl bg-coral-500/10 px-4 py-3 text-sm text-coral-400"></div>
@@ -733,8 +748,19 @@ function viewForm(existing){
 function bindForm(){
   const $ = id => document.getElementById(id);
   let anticipacion = STATE.editId ? (STATE.reminders.find(r=>r.id===STATE.editId)?.anticipacion_horas ?? 24) : 24;
-  const existingRegion = STATE.editId ? STATE.reminders.find(r=>r.id===STATE.editId)?.region : "";
-  const existingCentro = STATE.editId ? STATE.reminders.find(r=>r.id===STATE.editId)?.centro_medico : "";
+  
+  if (STATE.editId) {
+    const r = STATE.reminders.find(x => x.id === STATE.editId);
+    if (r && !ANTICIPACION_OPCIONES.some(o => o.valor === r.anticipacion_horas)) {
+      anticipacion = "personalizada";
+      const fechaCita = new Date(`${r.fecha}T${r.hora}`);
+      fechaCita.setHours(fechaCita.getHours() - r.anticipacion_horas);
+      setTimeout(() => {
+        if ($("f-fecha-aviso")) $("f-fecha-aviso").value = fechaCita.toISOString().split('T')[0];
+        if ($("f-hora-aviso")) $("f-hora-aviso").value = fechaCita.toTimeString().slice(0,5);
+      }, 50);
+    }
+  }
 
   function poblarCentros(region, seleccionado){
     const sel = $("f-centro");
@@ -778,13 +804,22 @@ function bindForm(){
   $("f-avisar-whatsapp").onchange = ()=>toggleCanal($("f-avisar-whatsapp"), $("wrap-whatsapp"), $("campo-telefono"));
   $("f-avisar-email").onchange = ()=>toggleCanal($("f-avisar-email"), $("wrap-email"), $("campo-email"));
 
-  // Anticipación chips
+    // Anticipación chips
   document.querySelectorAll("#anticipacion-chips button").forEach(b=>{
     b.onclick = ()=>{
-      anticipacion = Number(b.dataset.ant);
-      document.querySelectorAll("#anticipacion-chips button").forEach(x=>x.className = "chip" + (Number(x.dataset.ant)===anticipacion ? " chip-active":""));
+      if (b.id === "btn-ant-personalizada") {
+        anticipacion = "personalizada";
+        document.querySelectorAll("#anticipacion-chips button").forEach(x => x.classList.remove("chip-active"));
+        b.classList.add("chip-active");
+        $("bloque-fecha-manual").classList.remove("hidden");
+      } else {
+        anticipacion = Number(b.dataset.ant);
+        document.querySelectorAll("#anticipacion-chips button").forEach(x => x.className = "chip" + (Number(x.dataset.ant)===anticipacion ? " chip-active":""));
+        $("bloque-fecha-manual").classList.add("hidden");
+      }
     };
   });
+
 
   $("reminder-form").onsubmit = async (e)=>{
     e.preventDefault();
@@ -807,14 +842,22 @@ function bindForm(){
     $("form-submit").disabled = true;
     $("form-submit").textContent = "Guardando...";
 
-    const centroMedico = STATE.formTempTipo==="cita_medica" ? (STATE.formManualCentro ? $("f-centro-manual").value.trim() : $("f-centro")?.value) : null;
+    const centroMedico = STATE.formTempTipo==="cita_medica" ? ($("f-centro-manual")?.value.trim() || null) : null; 
+
+        let horasCalculadas = anticipacion;
+    if (anticipacion === "personalizada") {
+      const fechaCita = new Date(`${fecha}T${hora}`);
+      const fechaAviso = new Date(`${$("f-fecha-aviso").value}T${$("f-hora-aviso").value}`);
+      const diffMs = fechaCita.getTime() - fechaAviso.getTime();
+      horasCalculadas = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
+    }
 
     const payload = {
       user_id: STATE.user.id,
       tipo: STATE.formTempTipo,
       titulo, fecha, hora,
       centro_medico: STATE.formTempTipo==="cita_medica" ? (centroMedico||null) : null,
-      region: STATE.formTempTipo==="cita_medica" ? ($("f-region")?.value || null) : null,
+      region: null,
       especialidad: STATE.formTempTipo==="cita_medica" ? ($("f-especialidad")?.value || null) : null,
       medico: STATE.formTempTipo==="cita_medica" ? ($("f-medico")?.value || null) : null,
       numero_ficha: STATE.formTempTipo==="cita_medica" ? ($("f-ficha")?.value || null) : null,
@@ -825,7 +868,7 @@ function bindForm(){
       avisar_whatsapp: avisarWhatsapp,
       email_aviso: avisarEmail ? email : null,
       telefono_whatsapp: avisarWhatsapp ? telefono : null,
-      anticipacion_horas: anticipacion
+      anticipacion_horas: horasCalculadas
     };
 
     try{

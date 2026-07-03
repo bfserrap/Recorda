@@ -661,15 +661,25 @@ function viewForm(existing){
 
         <div id="bloque-cita" class="card space-y-5 p-5 ${STATE.formTempTipo!=='cita_medica'?'hidden':''}">
           <p class="text-sm font-medium text-mint-400">🩺 Detalles de la cita</p>
-                      <div class="space-y-4">
+                                  <div class="space-y-4">
               <label class="label-field !mb-0">Centro médico o clínica</label>
               <input id="f-centro-manual" class="input-field" placeholder="Ej: Integramédica, Clínica Dávila..." value="${esc(r.centro_medico)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
+            </div>
+
+            <div>
+              <label class="label-field">Médico(a) o profesional</label>
+              <input id="f-medico" class="input-field" placeholder="Ej: Dr. Juan Pérez" value="${esc(r.medico)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
+            </div>
+
+            <div>
+              <label class="label-field">Dirección exacta (opcional)</label>
+              <input id="f-direccion" class="input-field" placeholder="Ej: Av. Vitacura 1234" value="${esc(r.direccion)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
             </div>
 
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label class="label-field">Especialidad</label>
-              <select id="f-especialidad" class="input-field">
+                          <div>               <label class="label-field">Especialidad médica</label>               <select id="f-especialidad" class="input-field" onchange="document.getElementById('bloque-otra-especialidad').style.display = this.value === 'otra' ? 'block' : 'none'">                 <option value="">Selecciona una especialidad</option>                 <option value="Medicina General" ${r.especialidad==='Medicina General'?'selected':''}>Medicina General</option>                 <option value="Pediatría" ${r.especialidad==='Pediatría'?'selected':''}>Pediatría</option>                 <option value="Cardiología" ${r.especialidad==='Cardiología'?'selected':''}>Cardiología</option>                 <option value="otra" ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad)?'selected':''}>Otra especialidad...</option>               </select>             </div>              <div id="bloque-otra-especialidad" class="mt-2" style="display: ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? 'block' : 'none'};">               <label class="label-field text-xs">Escribe la especialidad personalizada</label>               <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Kinesiología, Dermatología..." value="${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? esc(r.especialidad) : ''}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />             </div> 
                 <option value="">Selecciona</option>
                 ${ESPECIALIDADES_MEDICAS.map(e=>`<option value="${esc(e)}" ${r.especialidad===e?'selected':''}>${esc(e)}</option>`).join("")}
               </select>
@@ -858,7 +868,7 @@ function bindForm(){
       titulo, fecha, hora,
       centro_medico: STATE.formTempTipo==="cita_medica" ? (centroMedico||null) : null,
       region: null,
-      especialidad: STATE.formTempTipo==="cita_medica" ? ($("f-especialidad")?.value || null) : null,
+      especialidad: STATE.formTempTipo==="cita_medica" ? ($("f-especialidad")?.value === "otra" ? $("f-especialidad-manual")?.value.trim() : $("f-f-especialidad")?.value) : null, 
       medico: STATE.formTempTipo==="cita_medica" ? ($("f-medico")?.value || null) : null,
       numero_ficha: STATE.formTempTipo==="cita_medica" ? ($("f-ficha")?.value || null) : null,
       direccion: STATE.formTempTipo==="cita_medica" ? ($("f-direccion")?.value || null) : null,

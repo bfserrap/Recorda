@@ -78,6 +78,16 @@
   .text-sand\/30 { color: #cbd5e1 !important; }
   .bg-ink-900\/70, .bg-ink-900\/80, .bg-ink-900\/90 { background-color: rgba(255, 255, 255, 0.85) !important; border-bottom: 1px solid #e2e8f0; }
   .border-white\/5 { border-color: #e2e8f0 !important; }
+
+  /* Evita que inputs/textareas se salgan de pantalla en celulares */
+  html { overflow-x: hidden; max-width: 100vw; }
+  input, textarea, select, .input-field {
+    max-width: 100%;
+    box-sizing: border-box;
+    font-size: 16px; /* evita el zoom automático de iOS al tocar el campo */
+  }
+  .grid, .flex { min-width: 0; }
+  h1, h2, h3, p, span { overflow-wrap: break-word; word-break: break-word; }
 </style>
 
 </head>
@@ -182,6 +192,12 @@ const TIPO_LABELS = {
   tramite:{label:"Trámite",emoji:"📄"},
   otro:{label:"Otro",emoji:"✨"}
 };
+const TITULO_PLACEHOLDER = {
+  cita_medica:"Ej: Control cardiología",
+  evento:"Ej: Cumpleaños de mamá",
+  tramite:"Ej: Renovar cédula de identidad",
+  otro:"Ej: Pagar cuenta de la luz"
+};
 const ANTICIPACION_OPCIONES = [
   {valor:1,label:"1 hora antes"},{valor:3,label:"3 horas antes"},
   {valor:24,label:"1 día antes"},{valor:48,label:"2 días antes"},
@@ -197,7 +213,8 @@ let STATE = {
   filtro: "todos",
   formTempTipo: "cita_medica",
   formManualCentro: false,
-  editId: null
+  editId: null,
+  popupMostrado: false
 };
 
 function navigate(hash){ window.location.hash = hash; }
@@ -210,6 +227,8 @@ async function init(){
   STATE.user = data.session?.user || null;
   sb.auth.onAuthStateChange((_event, session) => {
     STATE.user = session?.user || null;
+    if(_event === "SIGNED_IN") STATE.popupMostrado = false;
+    if(_event === "PASSWORD_RECOVERY") { navigate("nueva-clave"); return; }
     render();
   });
   await render();
@@ -282,6 +301,8 @@ async function render(){
 
   if(hash==="landing") { app.innerHTML = viewLanding(); bindLanding(); return; }
   if(hash==="login") { app.innerHTML = viewLogin(); bindLogin(); return; }
+  if(hash==="recuperar") { app.innerHTML = viewRecuperar(); bindRecuperar(); return; }
+  if(hash==="nueva-clave") { app.innerHTML = viewNuevaClave(); bindNuevaClave(); return; }
   if(hash==="dashboard") { app.innerHTML = viewDashboardLoading(); await loadReminders(); app.innerHTML = viewDashboard(); bindDashboard(); return; }
   if(hash==="nuevo") { STATE.editId=null; STATE.formTempTipo="cita_medica"; STATE.formManualCentro=false; app.innerHTML = viewForm(null); bindForm(); return; }
   if(hash.startsWith("editar/")) {
@@ -453,6 +474,7 @@ function viewLogin(){
           <div>
             <label class="label-field">Contraseña</label>
             <input id="in-password" type="password" class="input-field" placeholder="Mínimo 6 caracteres" minlength="6" required />
+            <a href="#recuperar" class="mt-2 inline-block text-xs font-medium text-mint-400 hover:underline">¿Olvidaste tu contraseña?</a>
           </div>
           <div id="auth-error" class="hidden rounded-xl bg-coral-500/10 px-4 py-3 text-sm text-coral-400"></div>
           <div id="auth-aviso" class="hidden rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400"></div>
@@ -515,7 +537,107 @@ function traducirError(msg){
   if(msg.includes("Password should be at least")) return "La contraseña debe tener al menos 6 caracteres.";
   return msg;
 }
+/* ============================================================
+   8.1) VISTA: RECUPERAR CONTRASEÑA
+   ============================================================ */
+function viewRecuperar(){
+  return `
+  <main class="min-h-screen">
+    ${navbar(false)}
+    <div class="mx-auto flex max-w-md flex-col justify-center px-5 py-14 sm:py-20">
+      <div class="mb-8 text-center">
+        <span class="text-4xl">🔑</span>
+        <h1 class="mt-3 font-display text-2xl font-bold text-sand sm:text-3xl">Recupera tu contraseña</h1>
+        <p class="mt-1 text-sm text-sand/50">Te enviaremos un correo con un enlace para crear una nueva</p>
+      </div>
+      <div class="card p-6 sm:p-8">
+        <form id="recuperar-form" class="space-y-4">
+          <div>
+            <label class="label-field">Correo electrónico</label>
+            <input id="r-email" type="email" class="input-field" placeholder="tucorreo@ejemplo.cl" required />
+          </div>
+          <div id="recuperar-error" class="hidden rounded-xl bg-coral-500/10 px-4 py-3 text-sm text-coral-400"></div>
+          <div id="recuperar-aviso" class="hidden rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400"></div>
+          <button id="recuperar-submit" type="submit" class="btn-primary w-full">Enviar enlace de recuperación</button>
+        </form>
+      </div>
+      <a href="#login" class="mt-6 text-center text-sm text-sand/40 hover:text-mint-400">← Volver a iniciar sesión</a>
+    </div>
+  </main>`;
+}
+function bindRecuperar(){
+  const $ = id => document.getElementById(id);
+  $("recuperar-form").onsubmit = async (e)=>{
+    e.preventDefault();
+    const email = $("r-email").value.trim();
+    $("recuperar-error").classList.add("hidden");
+    $("recuperar-aviso").classList.add("hidden");
+    $("recuperar-submit").disabled = true;
+    $("recuperar-submit").textContent = "Enviando...";
+    try{
+      const { error } = await sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname
+      });
+      if(error) throw error;
+      $("recuperar-aviso").textContent = "Listo, revisa tu correo (y la carpeta de spam) para continuar. 📩";
+      $("recuperar-aviso").classList.remove("hidden");
+    } catch(err){
+      $("recuperar-error").textContent = "⚠️ " + (err?.message || "No se pudo enviar el correo.");
+      $("recuperar-error").classList.remove("hidden");
+    } finally {
+      $("recuperar-submit").disabled = false;
+      $("recuperar-submit").textContent = "Enviar enlace de recuperación";
+    }
+  };
+}
 
+/* ============================================================
+   8.2) VISTA: NUEVA CONTRASEÑA (llega desde el link del correo)
+   ============================================================ */
+function viewNuevaClave(){
+  return `
+  <main class="min-h-screen">
+    ${navbar(false)}
+    <div class="mx-auto flex max-w-md flex-col justify-center px-5 py-14 sm:py-20">
+      <div class="mb-8 text-center">
+        <span class="text-4xl">🔐</span>
+        <h1 class="mt-3 font-display text-2xl font-bold text-sand sm:text-3xl">Crea tu nueva contraseña</h1>
+        <p class="mt-1 text-sm text-sand/50">Escríbela y quedará lista para tu próximo inicio de sesión</p>
+      </div>
+      <div class="card p-6 sm:p-8">
+        <form id="nueva-clave-form" class="space-y-4">
+          <div>
+            <label class="label-field">Nueva contraseña</label>
+            <input id="nc-password" type="password" class="input-field" placeholder="Mínimo 6 caracteres" minlength="6" required />
+          </div>
+          <div id="nueva-clave-error" class="hidden rounded-xl bg-coral-500/10 px-4 py-3 text-sm text-coral-400"></div>
+          <button id="nueva-clave-submit" type="submit" class="btn-primary w-full">Guardar nueva contraseña</button>
+        </form>
+      </div>
+    </div>
+  </main>`;
+}
+function bindNuevaClave(){
+  const $ = id => document.getElementById(id);
+  $("nueva-clave-form").onsubmit = async (e)=>{
+    e.preventDefault();
+    const password = $("nc-password").value;
+    $("nueva-clave-error").classList.add("hidden");
+    $("nueva-clave-submit").disabled = true;
+    $("nueva-clave-submit").textContent = "Guardando...";
+    try{
+      const { error } = await sb.auth.updateUser({ password });
+      if(error) throw error;
+      navigate("dashboard");
+    } catch(err){
+      $("nueva-clave-error").textContent = "⚠️ " + (err?.message || "No se pudo actualizar la contraseña.");
+      $("nueva-clave-error").classList.remove("hidden");
+    } finally {
+      $("nueva-clave-submit").disabled = false;
+      $("nueva-clave-submit").textContent = "Guardar nueva contraseña";
+    }
+  };
+}
 /* ============================================================
    9) DASHBOARD
    ============================================================ */
@@ -610,6 +732,10 @@ function reminderCard(r){
   </div>`;
 }
 function bindDashboard(){
+  if(!STATE.popupMostrado){
+    mostrarPopupRecordatorios();
+    STATE.popupMostrado = true;
+  }
   document.getElementById("btn-logout").onclick = async ()=>{ await sb.auth.signOut(); navigate("landing"); };
   document.querySelectorAll("#filtros button").forEach(b=>{
     b.onclick = ()=>{ STATE.filtro = b.dataset.f; render(); };
@@ -624,7 +750,38 @@ function bindDashboard(){
     };
   });
 }
+function mostrarPopupRecordatorios(){
+  const ahora = Date.now();
+  const proximos = STATE.reminders
+    .filter(r => new Date(`${r.fecha}T${r.hora}`).getTime() >= ahora)
+    .slice(0,3);
+  if(proximos.length===0) return;
 
+  const overlay = document.createElement("div");
+  overlay.id = "popup-proximos";
+  overlay.className = "fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 px-4 pb-4 sm:pb-0";
+  overlay.innerHTML = `
+    <div class="card w-full max-w-sm p-6">
+      <div class="flex items-center justify-between">
+        <p class="font-display text-lg font-semibold text-sand">🔔 Tus próximos recordatorios</p>
+        <button id="popup-cerrar" class="btn-ghost !px-2 !py-1 text-sand/40">✕</button>
+      </div>
+      <div class="mt-4 space-y-3">
+        ${proximos.map(r=>`
+          <div class="rounded-xl border border-white/10 p-3">
+            <p class="text-sm font-semibold text-sand">${TIPO_LABELS[r.tipo].emoji} ${esc(r.titulo)}</p>
+            <p class="text-xs text-sand/50">🗓️ ${formatearFechaLarga(r.fecha)} · 🕒 ${formatearHora(r.hora)} hrs</p>
+          </div>`).join("")}
+      </div>
+      <button id="popup-entendido" class="btn-primary mt-5 w-full">Entendido</button>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  const cerrar = ()=> overlay.remove();
+  document.getElementById("popup-cerrar").onclick = cerrar;
+  document.getElementById("popup-entendido").onclick = cerrar;
+  overlay.addEventListener("click", (e)=>{ if(e.target===overlay) cerrar(); });
+}
 /* ============================================================
    10) FORMULARIO: NUEVO / EDITAR RECORDATORIO
    ============================================================ */
@@ -652,7 +809,7 @@ function viewForm(existing){
         </div>
         <div>
           <label class="label-field" id="label-titulo">${STATE.formTempTipo==="cita_medica"?"Motivo de la cita":"Título"}</label>
-          <input id="f-titulo" class="input-field" placeholder="Ej: Control cardiología" value="${esc(r.titulo)}" required />
+          <input id="f-titulo" class="input-field" placeholder="${TITULO_PLACEHOLDER[STATE.formTempTipo]}" value="${esc(r.titulo)}" required />
         </div>
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div><label class="label-field">Fecha</label><input id="f-fecha" type="date" class="input-field" value="${r.fecha||''}" required /></div>
@@ -789,6 +946,7 @@ function bindForm(){
       $("bloque-cita").classList.toggle("hidden", STATE.formTempTipo!=="cita_medica");
       $("bloque-otro").classList.toggle("hidden", STATE.formTempTipo==="cita_medica");
       $("label-titulo").textContent = STATE.formTempTipo==="cita_medica" ? "Motivo de la cita" : "Título";
+      $("f-titulo").placeholder = TITULO_PLACEHOLDER[STATE.formTempTipo];
     };
   });
 

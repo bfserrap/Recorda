@@ -954,7 +954,7 @@ async function bindPerfilLoad(){
 await sb.from("profiles").update({
       nombre: document.getElementById("p-nombre").value,
       telefono_whatsapp: document.getElementById("p-telefono").value,
-      callmebot_apikey: document.getElementById("p-callmebot").value
+callmebot_apikey: document.getElementById("p-callmebot").value
     }).eq("id", STATE.user.id);
     const aviso = document.getElementById("perfil-aviso");
     aviso.textContent = "Datos guardados ✅"; aviso.classList.remove("hidden");

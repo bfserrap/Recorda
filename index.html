@@ -57,7 +57,7 @@
   .btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;padding:.6rem 1.1rem;font-family:'Space Grotesk',sans-serif;font-size:.875rem;font-weight:600;color:#475569;transition:.15s}
   .btn-ghost:hover{color:#2563eb;background:rgba(37,99,235,0.05)}
   .card{background:#ffffff;border:1px solid rgba(0,0,0,0.06);border-radius:1.5rem;box-shadow:0 10px 30px -10px rgba(0,0,0,0.06)}
-  .input-field{width:100%;border-radius:1rem;border:1px solid #cbd5e1;background:#ffffff;padding:.75rem 1rem;color:#0f172a;outline:none;transition:.15s}
+.input-field{width:100%;min-width:0;border-radius:1rem;border:1px solid #cbd5e1;background:#ffffff;padding:.75rem 1rem;color:#0f172a;outline:none;transition:.15s;box-sizing:border-box}
   .input-field::placeholder{color:#94a3b8}
   .input-field:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.15)}
   .label-field{display:block;margin-bottom:.375rem;font-size:.875rem;font-weight:600;color:#334155}
@@ -183,8 +183,9 @@ const TIPO_LABELS = {
   otro:{label:"Otro",emoji:"✨"}
 };
 const ANTICIPACION_OPCIONES = [
-  {valor:1,label:"1 hora antes"},{valor:3,label:"3 horas antes"},
-  {valor:24,label:"1 día antes"},{valor:48,label:"2 días antes"},
+  {valor:6,label:"6 horas antes"},
+  {valor:24,label:"1 día antes"},
+  {valor:72,label:"3 días antes"},
   {valor:168,label:"1 semana antes"}
 ];
 
@@ -547,7 +548,8 @@ function viewDashboard(){
           </div>
         </div>
         <div class="flex items-center gap-2">
-          <a href="#nuevo" class="btn-primary hidden !px-4 !py-2 text-sm sm:inline-flex">➕ Nuevo</a>
+<a href="#nuevo" class="btn-primary hidden !px-4 !py-2 text-sm sm:inline-flex">➕ Nuevo</a>
+          <a href="#perfil" class="btn-secondary hidden !px-4 !py-2 text-sm sm:inline-flex">👤 Perfil</a>
           <button id="btn-logout" class="btn-ghost !px-3 !py-2 text-sm">Salir</button>
         </div>
       </div>
@@ -678,11 +680,20 @@ function viewForm(existing){
 
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
               <label class="label-field">Especialidad</label>
-                          <div>               <label class="label-field">Especialidad médica</label>               <select id="f-especialidad" class="input-field" onchange="document.getElementById('bloque-otra-especialidad').style.display = this.value === 'otra' ? 'block' : 'none'">                 <option value="">Selecciona una especialidad</option>                 <option value="Medicina General" ${r.especialidad==='Medicina General'?'selected':''}>Medicina General</option>                 <option value="Pediatría" ${r.especialidad==='Pediatría'?'selected':''}>Pediatría</option>                 <option value="Cardiología" ${r.especialidad==='Cardiología'?'selected':''}>Cardiología</option>                 <option value="otra" ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad)?'selected':''}>Otra especialidad...</option>               </select>             </div>              <div id="bloque-otra-especialidad" class="mt-2" style="display: ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? 'block' : 'none'};">               <label class="label-field text-xs">Escribe la especialidad personalizada</label>               <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Kinesiología, Dermatología..." value="${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? esc(r.especialidad) : ''}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />             </div> 
-                <option value="">Selecciona</option>
-                ${ESPECIALIDADES_MEDICAS.map(e=>`<option value="${esc(e)}" ${r.especialidad===e?'selected':''}>${esc(e)}</option>`).join("")}
+              <select id="f-especialidad" class="input-field" onchange="document.getElementById('bloque-otra-especialidad').style.display = this.value === 'otra' ? 'block' : 'none'">
+                <option value="">Selecciona una especialidad</option>
+                <option value="Medicina General" ${r.especialidad==='Medicina General'?'selected':''}>Medicina General</option>
+                <option value="Pediatría" ${r.especialidad==='Pediatría'?'selected':''}>Pediatría</option>
+                <option value="Cardiología" ${r.especialidad==='Cardiología'?'selected':''}>Cardiología</option>
+                <option value="otra" ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad)?'selected':''}>Otra especialidad...</option>
               </select>
+              <div id="bloque-otra-especialidad" class="mt-2" style="display: ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? 'block' : 'none'};">
+                <label class="label-field text-xs">Escribe la especialidad personalizada</label>
+                <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Kinesiología, Dermatología..." value="${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? esc(r.especialidad) : ''}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
+              </div>
             </div>
             <div><label class="label-field">Médico(a) o profesional</label><input id="f-medico" class="input-field" placeholder="Ej: Dra. Andrea Muñoz" value="${esc(r.medico)}" /></div>
           </div>
@@ -727,6 +738,7 @@ function viewForm(existing){
             <div class="flex flex-wrap gap-2 mb-3" id="anticipacion-chips">
               ${ANTICIPACION_OPCIONES.map(o=>`<button type="button" data-ant="${o.valor}" class="chip ${(r.anticipacion_horas ?? 24)===o.valor?'chip-active':''}">⏰ ${o.label}</button>`).join("")}
               <button type="button" id="btn-ant-personalizada" class="chip ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24)) ? 'chip-active' : ''}">⚙️ Elegir fecha y hora exacta</button>
+              <button type="button" id="btn-modo-prueba" class="chip !border-coral-400 !text-coral-400">🧪 Probar en 5 minutos</button>
             </div>
             
             <div id="bloque-fecha-manual" class="grid grid-cols-1 gap-4 sm:grid-cols-2 mt-3 p-4 bg-slate-100 rounded-xl ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24)) ? '' : 'hidden'}">
@@ -822,6 +834,14 @@ function bindForm(){
         document.querySelectorAll("#anticipacion-chips button").forEach(x => x.classList.remove("chip-active"));
         b.classList.add("chip-active");
         $("bloque-fecha-manual").classList.remove("hidden");
+      } else if (b.id === "btn-modo-prueba") {
+        const enCincoMin = new Date(Date.now() + 5*60000);
+        $("f-fecha").value = enCincoMin.toISOString().split("T")[0];
+        $("f-hora").value = enCincoMin.toTimeString().slice(0,5);
+        anticipacion = 0;
+        document.querySelectorAll("#anticipacion-chips button").forEach(x => x.classList.remove("chip-active"));
+        b.classList.add("chip-active");
+        $("bloque-fecha-manual").classList.add("hidden");
       } else {
         anticipacion = Number(b.dataset.ant);
         document.querySelectorAll("#anticipacion-chips button").forEach(x => x.className = "chip" + (Number(x.dataset.ant)===anticipacion ? " chip-active":""));
@@ -930,13 +950,19 @@ async function bindPerfilLoad(){
             <input id="p-telefono" class="input-field" placeholder="Ej: +56 9 1234 5678" value="${esc(perfil?.telefono_whatsapp)}" />
             <p class="mt-1 text-xs text-sand/40">Se usará como valor por defecto al crear nuevos recordatorios.</p>
           </div>
-          <div>
+<div>
             <label class="label-field">API Key de CallMeBot</label>
             <input id="p-callmebot" class="input-field" placeholder="Ej: 123456" value="${esc(perfil?.callmebot_apikey)}" />
-            <p class="mt-1 text-xs text-sand/40">
-              Agrega el contacto <b>+34 644 51 79 65</b> en WhatsApp y envíale el mensaje
-              <i>"I allow callmebot to send me messages"</i>. Te responderá con tu apikey — pégalo aquí.
-            </p>
+            <div class="mt-3 rounded-xl border border-mint-500/30 bg-mint-500/5 p-4 text-xs text-sand/70 space-y-2">
+              <p class="font-semibold text-sand">📲 Cómo activar tu WhatsApp (una sola vez):</p>
+              <ol class="list-decimal list-inside space-y-1">
+                <li>Toca el botón de abajo — abre WhatsApp con el mensaje ya escrito</li>
+                <li>Solo aprieta "Enviar" en WhatsApp</li>
+                <li>Espera la respuesta del bot (hasta 2 minutos) — te llegará un código</li>
+                <li>Pega ese código arriba y guarda cambios</li>
+              </ol>
+              <a href="https://wa.me/34611011637?text=I%20allow%20callmebot%20to%20send%20me%20messages" target="_blank" rel="noopener noreferrer" class="btn-primary !mt-2 w-full !py-2 text-sm">📲 Abrir WhatsApp y activar</a>
+            </div>
           </div>
           <div id="perfil-aviso" class="hidden rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400"></div>
           <button type="submit" id="perfil-submit" class="btn-primary w-full">Guardar cambios</button>

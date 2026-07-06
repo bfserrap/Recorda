@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Recorda 🔔 — Tus horas y eventos, sin olvidos</title>
+<meta name="theme-color" content="#f0f4f8" /> 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Tailwind (CDN, sin build) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+                colors: {
+          ink: { 950:'#f8fafc',900:'#ffffff',800:'#f1f5f9',700:'#e2e8f0',600:'#cbd5e1' },
+          mint: { 400:'#2563eb',500:'#3b82f6',600:'#1d4ed8' },
+          coral: { 400:'#ef4444',500:'#dc2626' },
+          sand: '#0f172a'
+        },
+
+        fontFamily: { display:['Space Grotesk','sans-serif'], body:['Inter','sans-serif'] },
+        borderRadius: { xl2:'1.5rem', xl3:'2rem' },
+        boxShadow: {
+          glow:'0 0 0 1px rgba(47,227,174,0.15), 0 20px 60px -20px rgba(47,227,174,0.35)',
+          card:'0 10px 40px -15px rgba(0,0,0,0.5)'
+        }
+      }
+    }
+  }
+</script>
+
+<!-- Supabase JS -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+  html{scroll-behavior:smooth}
+  body{background-color:#f0f4f8;color:#0f172a;font-family:'Inter',sans-serif;
+    background-image:radial-gradient(circle at 20% 0%, rgba(37,99,235,0.15), transparent 50%), radial-gradient(circle at 90% 10%, rgba(6,182,212,0.12), transparent 45%);
+    overflow-x:hidden;}
+  .font-display{font-family:'Space Grotesk',sans-serif}
+  ::selection{background:#2563eb;color:#ffffff}
+  ::-webkit-scrollbar{width:10px}
+  ::-webkit-scrollbar-track{background:#f0f4f8}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:999px}
+  .glass{background:rgba(255,255,255,0.7);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(0,0,0,0.06)}
+  .text-gradient{background:linear-gradient(95deg,#2563eb 0%,#06b6d4 50%,#3b82f6 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;background:#2563eb;padding:.75rem 1.5rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#ffffff;box-shadow:0 10px 25px -5px rgba(37,99,235,0.35);transition:.15s}
+  .btn-primary:active{transform:scale(.96)}
+  .btn-primary:hover{background:#1d4ed8}
+  .btn-primary:disabled{opacity:.5;pointer-events:none}
+  .btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;padding:.75rem 1.5rem;font-family:'Space Grotesk',sans-serif;font-weight:600;color:#334155;background:#ffffff;border:1px solid #cbd5e1;box-shadow:0 2px 5px rgba(0,0,0,0.04);transition:.15s}
+  .btn-secondary:active{transform:scale(.96)}
+  .btn-secondary:hover{background:#f8fafc;border-color:#94a3b8}
+  .btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;padding:.6rem 1.1rem;font-family:'Space Grotesk',sans-serif;font-size:.875rem;font-weight:600;color:#475569;transition:.15s}
+  .btn-ghost:hover{color:#2563eb;background:rgba(37,99,235,0.05)}
+  .card{background:#ffffff;border:1px solid rgba(0,0,0,0.06);border-radius:1.5rem;box-shadow:0 10px 30px -10px rgba(0,0,0,0.06)}
+.input-field{width:100%;min-width:0;border-radius:1rem;border:1px solid #cbd5e1;background:#ffffff;padding:.75rem 1rem;color:#0f172a;outline:none;transition:.15s;box-sizing:border-box}
+  .input-field::placeholder{color:#94a3b8}
+  .input-field:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.15)}
+  .label-field{display:block;margin-bottom:.375rem;font-size:.875rem;font-weight:600;color:#334155}
+  .chip{cursor:pointer;user-select:none;border-radius:999px;border:1px solid #cbd5e1;background:#ffffff;padding:.5rem 1rem;font-size:.875rem;font-weight:500;color:#475569;transition:.15s}
+  .chip:hover{border-color:#2563eb;color:#2563eb}
+  .chip-active{border-color:#2563eb;background:rgba(37,99,235,0.08);color:#2563eb;font-weight:600}
+  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  .animate-float{animation:float 6s ease-in-out infinite}
+  .view{display:none}
+  .view.active{display:block}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+  /* Evita que inputs de fecha/hora (u otros hijos de un grid) rompan el ancho en celulares */
+  .grid > *{min-width:0}
+  input[type="date"], input[type="time"]{min-width:0;width:100%}
+  .form-grid-2{display:grid;grid-template-columns:1fr;gap:1rem}
+  @media (min-width:640px){.form-grid-2{grid-template-columns:1fr 1fr}}
+  .form-grid-2 > *{min-width:0}
+
+  /* Forzar la inversión de colores oscuros heredados por las clases del Tailwind antiguo */
+  .text-sand { color: #0f172a !important; }
+  .text-sand\/60 { color: #475569 !important; }
+  .text-sand\/50 { color: #64748b !important; }
+  .text-sand\/40 { color: #94a3b8 !important; }
+  .text-sand\/30 { color: #cbd5e1 !important; }
+  .bg-ink-900\/70, .bg-ink-900\/80, .bg-ink-900\/90 { background-color: rgba(255, 255, 255, 0.85) !important; border-bottom: 1px solid #e2e8f0; }
+  .border-white\/5 { border-color: #e2e8f0 !important; }
+</style>
+
+</head>
+<body class="min-h-screen">
+
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   1) CONFIGURACIÓN — edita estas 2 líneas con tus datos reales
+   Los sacas en supabase.com -> tu proyecto -> Settings -> API
+   ============================================================ */
+const SUPABASE_URL = "https://soizfreqyjwishczfrmc.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_JLIsPY_j1xWfLgYtIKFZrw_CO15cFw8";
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+/* ============================================================
+   2) DATOS: centros médicos de Chile por región (editable)
+   ============================================================ */
+const CENTROS_MEDICOS_CHILE = [
+  { region:"Arica y Parinacota", centros:[
+    {nombre:"Hospital Dr. Juan Noé Crevani",comuna:"Arica"},
+    {nombre:"Clínica Nuestra Señora de Guadalupe",comuna:"Arica"}]},
+  { region:"Tarapacá", centros:[
+    {nombre:"Hospital Regional Dr. Ernesto Torres Galdames",comuna:"Iquique"},
+    {nombre:"Clínica Iquique (RedSalud)",comuna:"Iquique"}]},
+  { region:"Antofagasta", centros:[
+    {nombre:"Hospital Regional Dr. Leonardo Guzmán",comuna:"Antofagasta"},
+    {nombre:"Clínica Antofagasta",comuna:"Antofagasta"},
+    {nombre:"Megasalud Antofagasta",comuna:"Antofagasta"}]},
+  { region:"Atacama", centros:[
+    {nombre:"Hospital Regional San José del Carmen",comuna:"Copiapó"}]},
+  { region:"Coquimbo", centros:[
+    {nombre:"Hospital San Juan de Dios de La Serena",comuna:"La Serena"},
+    {nombre:"Clínica Elqui",comuna:"La Serena"},
+    {nombre:"Clínica Coquimbo",comuna:"Coquimbo"}]},
+  { region:"Valparaíso", centros:[
+    {nombre:"Hospital Carlos Van Buren",comuna:"Valparaíso"},
+    {nombre:"Clínica Van Buren",comuna:"Valparaíso"},
+    {nombre:"Clínica ReSalud Valparaíso",comuna:"Valparaíso"},
+    {nombre:"Hospital Gustavo Fricke",comuna:"Viña del Mar"},
+    {nombre:"Clínica Ciudad del Mar",comuna:"Viña del Mar"},
+    {nombre:"Clínica Reñaca",comuna:"Viña del Mar"}]},
+  { region:"Metropolitana de Santiago", centros:[
+    {nombre:"Clínica Las Condes",comuna:"Las Condes"},
+    {nombre:"Clínica Alemana",comuna:"Vitacura"},
+    {nombre:"Clínica Santa María",comuna:"Providencia"},
+    {nombre:"Clínica Indisa",comuna:"Providencia"},
+    {nombre:"Clínica UC Christus",comuna:"Santiago"},
+    {nombre:"Clínica Dávila",comuna:"Recoleta"},
+    {nombre:"RedSalud Providencia",comuna:"Providencia"},
+    {nombre:"Megasalud Santiago Centro",comuna:"Santiago"},
+    {nombre:"Hospital Clínico Universidad de Chile",comuna:"Independencia"},
+    {nombre:"Hospital San Juan de Dios",comuna:"Santiago"},
+    {nombre:"Hospital Barros Luco Trudeau",comuna:"San Miguel"},
+    {nombre:"Hospital Sótero del Río",comuna:"Puente Alto"},
+    {nombre:"Hospital San José",comuna:"Independencia"},
+    {nombre:"Clínica Bupa Santiago (ex Cruz Blanca)",comuna:"Santiago"},
+    {nombre:"Clínica Vespucio",comuna:"La Florida"},
+    {nombre:"Integramédica Providencia",comuna:"Providencia"}]},
+  { region:"Libertador General Bernardo O'Higgins", centros:[
+    {nombre:"Hospital Regional Rancagua",comuna:"Rancagua"},
+    {nombre:"Clínica Los Andes",comuna:"Rancagua"},
+    {nombre:"RedSalud Rancagua",comuna:"Rancagua"}]},
+  { region:"Maule", centros:[
+    {nombre:"Hospital Regional de Talca",comuna:"Talca"},
+    {nombre:"Clínica Ancora",comuna:"Talca"},
+    {nombre:"Clínica Andes Salud Talca",comuna:"Talca"}]},
+  { region:"Ñuble", centros:[
+    {nombre:"Hospital Clínico Herminda Martín",comuna:"Chillán"},
+    {nombre:"Clínica Bío Bío Chillán",comuna:"Chillán"}]},
+  { region:"Biobío", centros:[
+    {nombre:"Hospital Regional Guillermo Grant Benavente",comuna:"Concepción"},
+    {nombre:"Clínica Sanatorio Alemán",comuna:"Concepción"},
+    {nombre:"Clínica Bío Bío",comuna:"Concepción"},
+    {nombre:"RedSalud Concepción",comuna:"Concepción"}]},
+  { region:"La Araucanía", centros:[
+    {nombre:"Hospital Hernán Henríquez Aravena",comuna:"Temuco"},
+    {nombre:"Clínica Alemana de Temuco",comuna:"Temuco"},
+    {nombre:"Clínica Mayor Temuco",comuna:"Temuco"}]},
+  { region:"Los Ríos", centros:[
+    {nombre:"Hospital Base Valdivia",comuna:"Valdivia"},
+    {nombre:"Clínica Alemana Valdivia",comuna:"Valdivia"}]},
+  { region:"Los Lagos", centros:[
+    {nombre:"Hospital Base Osorno",comuna:"Osorno"},
+    {nombre:"Hospital Puerto Montt Dr. Eduardo Schütz",comuna:"Puerto Montt"},
+    {nombre:"Clínica Alemana Puerto Montt",comuna:"Puerto Montt"},
+    {nombre:"Clínica Puerto Varas",comuna:"Puerto Varas"}]},
+  { region:"Aysén", centros:[
+    {nombre:"Hospital Regional Coyhaique",comuna:"Coyhaique"}]},
+  { region:"Magallanes y de la Antártica Chilena", centros:[
+    {nombre:"Hospital Clínico Magallanes",comuna:"Punta Arenas"},
+    {nombre:"Clínica Magallanes",comuna:"Punta Arenas"}]}
+];
+
+const ESPECIALIDADES_MEDICAS = ["Medicina general","Pediatría","Ginecología y obstetricia","Traumatología","Cardiología","Dermatología","Oftalmología","Otorrinolaringología","Odontología","Kinesiología","Nutrición","Psicología / Salud mental","Neurología","Urología","Endocrinología","Broncopulmonar","Gastroenterología","Reumatología","Oncología","Toma de exámenes / Laboratorio","Imagenología (ecografía, rayos X, escáner)","Otra especialidad"];
+
+const TIPO_LABELS = {
+  cita_medica:{label:"Cita médica",emoji:"🩺"},
+  evento:{label:"Evento",emoji:"🎉"},
+  tramite:{label:"Trámite",emoji:"📄"},
+  otro:{label:"Otro",emoji:"✨"}
+};
+const ANTICIPACION_OPCIONES = [
+  {valor:6,label:"6 horas antes"},
+  {valor:24,label:"1 día antes"},
+  {valor:72,label:"3 días antes"},
+  {valor:168,label:"1 semana antes"}
+];
+
+/* ============================================================
+   3) ESTADO GLOBAL Y RUTEO SIMPLE (hash based)
+   ============================================================ */
+let STATE = {
+  user: null,
+  reminders: [],
+  filtro: "todos",
+  formTempTipo: "cita_medica",
+  formManualCentro: false,
+  editId: null
+};
+
+function navigate(hash){ window.location.hash = hash; }
+
+window.addEventListener("hashchange", render);
+window.addEventListener("DOMContentLoaded", init);
+
+async function init(){
+  const { data } = await sb.auth.getSession();
+  STATE.user = data.session?.user || null;
+  sb.auth.onAuthStateChange((_event, session) => {
+    STATE.user = session?.user || null;
+    render();
+  });
+  await render();
+}
+
+/* ============================================================
+   4) UTILIDADES
+   ============================================================ */
+function normalizarTelefono(telefono){
+  let limpio = (telefono||"").replace(/[^\d+]/g,"");
+  if(limpio.startsWith("+")) limpio = limpio.slice(1);
+  if(limpio.startsWith("56")) return limpio;
+  if(limpio.startsWith("9") && limpio.length===9) return "56"+limpio;
+  return limpio;
+}
+function formatearFechaLarga(fecha){
+  const [y,m,d] = fecha.split("-").map(Number);
+  const dt = new Date(y,m-1,d);
+  return dt.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+}
+function formatearHora(hora){
+  const [h,m] = hora.split(":").map(Number);
+  const dt = new Date(); dt.setHours(h,m);
+  return dt.toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"});
+}
+function construirMensaje(r){
+  const emoji = TIPO_LABELS[r.tipo].emoji;
+  const linea = "▬▬▬▬▬▬▬▬▬▬▬▬▬▬";
+  const partes = [`${emoji} *${r.titulo}*`, linea,
+    `🗓️ *Fecha:* ${formatearFechaLarga(r.fecha)}`,
+    `🕒 *Hora:* ${formatearHora(r.hora)} hrs`];
+  if(r.tipo==="cita_medica"){
+    if(r.centro_medico) partes.push(`🏥 *Centro:* ${r.centro_medico}`);
+    if(r.especialidad) partes.push(`🩺 *Especialidad:* ${r.especialidad}`);
+    if(r.medico) partes.push(`👨‍⚕️ *Profesional:* ${r.medico}`);
+    if(r.numero_ficha) partes.push(`🔖 *N° de ficha/orden:* ${r.numero_ficha}`);
+    if(r.direccion) partes.push(`📍 *Dirección:* ${r.direccion}`);
+  } else if(r.ubicacion){ partes.push(`📍 *Lugar:* ${r.ubicacion}`); }
+  if(r.notas){ partes.push(linea); partes.push(`📝 *Notas:* ${r.notas}`); }
+  partes.push(linea, `Enviado por *Recorda* 🔔 — no lo olvides ✅`);
+  return partes.join("\n");
+}
+function linkWhatsApp(r){
+  const mensaje = encodeURIComponent(construirMensaje(r));
+  const telefono = r.telefono_whatsapp ? normalizarTelefono(r.telefono_whatsapp) : "";
+  return `https://wa.me/${telefono}?text=${mensaje}`;
+}
+function diasRestantes(fecha,hora){
+  const objetivo = new Date(`${fecha}T${hora}`);
+  const diffMs = objetivo.getTime() - Date.now();
+  const diffHoras = diffMs/1000/60/60;
+  if(diffMs<0) return {texto:"Ya pasó",urgente:false,pasado:true};
+  if(diffHoras<1) return {texto:"¡Es en menos de 1 hora!",urgente:true,pasado:false};
+  if(diffHoras<24) return {texto:`En ${Math.round(diffHoras)} horas`,urgente:true,pasado:false};
+  const dias = Math.round(diffHoras/24);
+  return {texto:`En ${dias} día${dias===1?"":"s"}`,urgente:dias<=2,pasado:false};
+}
+function esc(s){ return (s??"").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ============================================================
+   5) RENDER PRINCIPAL
+   ============================================================ */
+async function render(){
+  const hash = window.location.hash.replace("#","") || (STATE.user ? "dashboard" : "landing");
+
+  if(!STATE.user && hash.startsWith("dashboard")){ navigate("login"); return; }
+  if(STATE.user && (hash==="landing" || hash==="login")){ navigate("dashboard"); return; }
+
+  const app = document.getElementById("app");
+
+  if(hash==="landing") { app.innerHTML = viewLanding(); bindLanding(); return; }
+  if(hash==="login") { app.innerHTML = viewLogin(); bindLogin(); return; }
+  if(hash==="dashboard") { app.innerHTML = viewDashboardLoading(); await loadReminders(); app.innerHTML = viewDashboard(); bindDashboard(); return; }
+  if(hash==="nuevo") { STATE.editId=null; STATE.formTempTipo="cita_medica"; STATE.formManualCentro=false; app.innerHTML = viewForm(null); bindForm(); return; }
+  if(hash.startsWith("editar/")) {
+    const id = hash.split("/")[1];
+    await loadReminders();
+    const r = STATE.reminders.find(x=>x.id===id);
+    STATE.editId = id;
+    STATE.formTempTipo = r?.tipo || "cita_medica";
+    STATE.formManualCentro = !!r?.centro_medico && !CENTROS_MEDICOS_CHILE.some(reg=>reg.centros.some(c=>c.nombre===r.centro_medico));
+    app.innerHTML = viewForm(r);
+    bindForm();
+    return;
+  }
+  if(hash==="perfil") { app.innerHTML = viewPerfilLoading(); await bindPerfilLoad(); return; }
+
+  navigate(STATE.user ? "dashboard" : "landing");
+}
+
+/* ============================================================
+   6) NAVBAR / BOTTOM NAV
+   ============================================================ */
+function navbar(showAuth=true){
+  return `
+  <header class="sticky top-0 z-40 border-b border-white/5 bg-ink-900/70 backdrop-blur-xl">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-5 py-4">
+      <a href="#landing" class="flex items-center gap-2">
+        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-mint-500 text-lg shadow-glow">🔔</span>
+        <span class="font-display text-lg font-bold tracking-tight text-sand">Recorda</span>
+      </a>
+                ${showAuth ? `
+          <div class="flex items-center gap-2">
+            <a href="#login" class="btn-secondary !px-4 !py-2 text-sm">Iniciar sesión</a>
+            <a href="#login" onclick="setTimeout(()=>document.getElementById('modo-registro')?.click(),50)" class="btn-primary !px-4 !py-2 text-sm hidden sm:inline-flex">Crear cuenta</a>
+          </div>` : ``}
+    </div>
+  </header>`;
+}
+function bottomNav(active){
+  const items = [["dashboard","🏠","Inicio"],["nuevo","➕","Nuevo"],["perfil","👤","Perfil"]];
+  return `
+  <nav class="fixed inset-x-0 bottom-0 z-40 border-t border-white/5 bg-ink-900/90 backdrop-blur-xl sm:hidden">
+    <div class="mx-auto flex max-w-md items-stretch justify-around px-2 pt-1" style="padding-bottom:max(env(safe-area-inset-bottom),0.5rem)">
+      ${items.map(([h,e,l])=>`
+        <a href="#${h}" class="flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 text-xs font-medium transition ${active===h?'text-mint-400':'text-sand/40'}">
+          <span class="text-lg">${e}</span>${l}
+        </a>`).join("")}
+    </div>
+  </nav>`;
+}
+
+/* ============================================================
+   7) VISTA: LANDING
+   ============================================================ */
+function viewLanding(){
+  const FEATURES = [
+    ["🩺","Citas médicas ordenadas","Elige el centro médico o clínica desde el listado por región, o escríbelo tú mismo. Guarda especialidad, médico y N° de ficha."],
+    ["📲","Aviso directo a tu WhatsApp","El mensaje llega con todo el detalle: fecha, hora, lugar y notas, listo para leer de un vistazo antes de salir."],
+    ["📧","También por correo","Elige si quieres el aviso por email, WhatsApp o ambos. Tú decides cómo te avisamos."],
+    ["⏰","Tú eliges la anticipación","1 hora, 3 horas, 1 día, 1 semana antes. Ajusta el aviso a lo que necesitas."],
+    ["🎉","No solo horas médicas","Cumpleaños, trámites, reuniones, pagos, controles del auto: todo lo que se te suele olvidar."],
+    ["📊","Todos tus registros a mano","Historial completo de tus recordatorios pasados y próximos, ordenados y buscables."]
+  ];
+  const PASOS = [
+    ["01","Crea tu cuenta","Regístrate gratis con tu correo en menos de un minuto."],
+    ["02","Agrega tu recordatorio","Cita médica, evento o trámite. Completa los detalles que importan."],
+    ["03","Elige cómo avisarte","WhatsApp, correo o ambos, con la anticipación que prefieras."],
+    ["04","Listo, no se te olvida","Recorda te avisa a tiempo, con todos los detalles ordenados."]
+  ];
+  return `
+  <main class="relative">
+    ${navbar(true)}
+    <section class="relative overflow-hidden px-5 pb-20 pt-16 sm:pb-28 sm:pt-24">
+      <div class="mx-auto max-w-4xl text-center">
+        <span class="glass mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm text-mint-400">🇨🇱 Hecho para que a los chilenos no se les pasen sus horas</span>
+        <h1 class="font-display text-4xl font-bold leading-[1.05] tracking-tight text-sand sm:text-6xl">
+          Tu hora médica, tu evento, <span class="text-gradient">tu trámite.</span><br/>Nunca más un olvido.
+        </h1>
+        <p class="mx-auto mt-6 max-w-xl text-base text-sand/60 sm:text-lg">Guarda tus citas y eventos importantes y recibe un aviso automático por WhatsApp o correo, con todos los detalles, antes de que se te olvide. 🔔</p>
+        <div class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <a href="#login" onclick="setTimeout(()=>document.getElementById('modo-registro')?.click(),50)" class="btn-primary w-full sm:w-auto">Crear mi cuenta gratis ✨</a>
+          <a href="#login" class="btn-secondary w-full sm:w-auto">Ya tengo cuenta</a>
+        </div>
+        <p class="mt-4 text-xs text-sand/40">Gratis para empezar · No necesitas tarjeta de crédito</p>
+      </div>
+      <div class="mx-auto mt-16 max-w-md animate-float">
+        <div class="card p-5 text-left">
+          <div class="flex items-center justify-between">
+            <span class="chip chip-active">🩺 Cita médica</span>
+            <span class="text-xs text-sand/40">Mañana · 09:30</span>
+          </div>
+          <h3 class="mt-4 font-display text-lg font-semibold text-sand">Control cardiología</h3>
+          <p class="mt-1 text-sm text-sand/60">Clínica Las Condes · Dr. Andrés Fuentes</p>
+          <div class="mt-4 flex items-center gap-2 text-xs text-sand/50">
+            <span class="rounded-full bg-mint-500/15 px-3 py-1 text-mint-400">📲 WhatsApp</span>
+            <span class="rounded-full bg-white/5 px-3 py-1">📧 Correo</span>
+            <span class="rounded-full bg-white/5 px-3 py-1">⏰ 3 h antes</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="px-5 py-16 sm:py-24">
+      <div class="mx-auto max-w-6xl">
+        <div class="mx-auto max-w-xl text-center">
+          <h2 class="font-display text-3xl font-bold text-sand sm:text-4xl">Todo lo que necesitas para no olvidar nada</h2>
+          <p class="mt-3 text-sand/60">Pensado para la vida real: horas médicas que se agendan con meses de anticipación, eventos, trámites y todo lo demás.</p>
+        </div>
+        <div class="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          ${FEATURES.map(([e,t,x])=>`
+            <div class="card p-6 transition hover:-translate-y-1">
+              <span class="text-3xl">${e}</span>
+              <h3 class="mt-4 font-display text-lg font-semibold text-sand">${t}</h3>
+              <p class="mt-2 text-sm leading-relaxed text-sand/60">${x}</p>
+            </div>`).join("")}
+        </div>
+      </div>
+    </section>
+    <section class="px-5 py-16 sm:py-24">
+      <div class="mx-auto max-w-6xl">
+        <div class="mx-auto max-w-xl text-center"><h2 class="font-display text-3xl font-bold text-sand sm:text-4xl">Cómo funciona</h2></div>
+        <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          ${PASOS.map(([n,t,x])=>`
+            <div class="relative">
+              <span class="font-display text-4xl font-bold text-mint-500/30">${n}</span>
+              <h3 class="mt-2 font-display text-base font-semibold text-sand">${t}</h3>
+              <p class="mt-1.5 text-sm text-sand/60">${x}</p>
+            </div>`).join("")}
+        </div>
+      </div>
+    </section>
+    <section class="px-5 pb-24">
+      <div class="card mx-auto max-w-4xl bg-gradient-to-br from-mint-500/10 to-transparent p-10 text-center sm:p-16">
+        <h2 class="font-display text-3xl font-bold text-sand sm:text-4xl">Deja de depender de tu memoria 🧠</h2>
+        <p class="mx-auto mt-3 max-w-md text-sand/60">Crea tu cuenta gratis y agenda tu primer recordatorio en menos de 2 minutos.</p>
+        <a href="#login" onclick="setTimeout(()=>document.getElementById('modo-registro')?.click(),50)" class="btn-primary mt-8 inline-flex">Empezar gratis ahora →</a>
+      </div>
+    </section>
+    <footer class="border-t border-white/5 px-5 py-8 text-center text-xs text-sand/30">Recorda 🔔 — Hecho en Chile. ${new Date().getFullYear()}</footer>
+  </main>`;
+}
+function bindLanding(){}
+
+/* ============================================================
+   8) VISTA: LOGIN / REGISTRO
+   ============================================================ */
+function viewLogin(){
+  return `
+  <main class="min-h-screen">
+    ${navbar(false)}
+    <div class="mx-auto flex max-w-md flex-col justify-center px-5 py-14 sm:py-20">
+      <div class="mb-8 text-center">
+        <span class="text-4xl">🔔</span>
+        <h1 id="login-titulo" class="mt-3 font-display text-2xl font-bold text-sand sm:text-3xl">Bienvenido de vuelta</h1>
+        <p id="login-subtitulo" class="mt-1 text-sm text-sand/50">Ingresa para ver tus recordatorios</p>
+      </div>
+      <div class="card p-6 sm:p-8">
+        <div class="mb-6 flex rounded-full bg-white/5 p-1 text-sm">
+          <button id="modo-login" type="button" class="flex-1 rounded-full py-2 font-medium transition bg-mint-500 text-ink-950">Iniciar sesión</button>
+          <button id="modo-registro" type="button" class="flex-1 rounded-full py-2 font-medium transition text-sand/60">Registrarme</button>
+        </div>
+        <form id="auth-form" class="space-y-4">
+          <div id="campo-nombre" class="hidden">
+            <label class="label-field">Tu nombre</label>
+            <input id="in-nombre" class="input-field" placeholder="Ej: María Pérez" />
+          </div>
+          <div>
+            <label class="label-field">Correo electrónico</label>
+            <input id="in-email" type="email" class="input-field" placeholder="tucorreo@ejemplo.cl" required />
+          </div>
+          <div>
+            <label class="label-field">Contraseña</label>
+            <input id="in-password" type="password" class="input-field" placeholder="Mínimo 6 caracteres" minlength="6" required />
+          </div>
+          <div id="auth-error" class="hidden rounded-xl bg-coral-500/10 px-4 py-3 text-sm text-coral-400"></div>
+          <div id="auth-aviso" class="hidden rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400"></div>
+          <button id="auth-submit" type="submit" class="btn-primary w-full">Iniciar sesión →</button>
+        </form>
+      </div>
+      <a href="#landing" class="mt-6 text-center text-sm text-sand/40 hover:text-mint-400">← Volver al inicio</a>
+    </div>
+  </main>`;
+}
+function bindLogin(){
+  let modo = "login";
+  const $ = id => document.getElementById(id);
+  function setModo(m){
+    modo = m;
+    $("modo-login").className = "flex-1 rounded-full py-2 font-medium transition " + (m==="login" ? "bg-mint-500 text-ink-950" : "text-sand/60");
+    $("modo-registro").className = "flex-1 rounded-full py-2 font-medium transition " + (m==="registro" ? "bg-mint-500 text-ink-950" : "text-sand/60");
+    $("campo-nombre").classList.toggle("hidden", m!=="registro");
+    $("login-titulo").textContent = m==="login" ? "Bienvenido de vuelta" : "Crea tu cuenta gratis";
+    $("login-subtitulo").textContent = m==="login" ? "Ingresa para ver tus recordatorios" : "Toma menos de un minuto";
+    $("auth-submit").textContent = m==="login" ? "Iniciar sesión →" : "Crear cuenta →";
+    $("auth-error").classList.add("hidden"); $("auth-aviso").classList.add("hidden");
+  }
+  $("modo-login").onclick = ()=>setModo("login");
+  $("modo-registro").onclick = ()=>setModo("registro");
+
+  $("auth-form").onsubmit = async (e)=>{
+    e.preventDefault();
+    const email = $("in-email").value.trim();
+    const password = $("in-password").value;
+    const nombre = $("in-nombre").value.trim();
+    $("auth-error").classList.add("hidden"); $("auth-aviso").classList.add("hidden");
+    $("auth-submit").disabled = true;
+    $("auth-submit").textContent = "Un momento...";
+    try{
+      if(modo==="registro"){
+        const { error } = await sb.auth.signUp({ email, password, options:{ data:{ nombre } } });
+        if(error) throw error;
+        $("auth-aviso").textContent = "¡Cuenta creada! Revisa tu correo si te pedimos confirmarlo, o inicia sesión directamente. 🎉";
+        $("auth-aviso").classList.remove("hidden");
+        setModo("login");
+      } else {
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if(error) throw error;
+        navigate("dashboard");
+      }
+    } catch(err){
+      $("auth-error").textContent = "⚠️ " + traducirError(err?.message);
+      $("auth-error").classList.remove("hidden");
+    } finally {
+      $("auth-submit").disabled = false;
+      $("auth-submit").textContent = modo==="login" ? "Iniciar sesión →" : "Crear cuenta →";
+    }
+  };
+}
+function traducirError(msg){
+  if(!msg) return "Ocurrió un error. Intenta de nuevo.";
+  if(msg.includes("Invalid login credentials")) return "Correo o contraseña incorrectos.";
+  if(msg.includes("User already registered")) return "Ese correo ya tiene una cuenta. Intenta iniciar sesión.";
+  if(msg.includes("Password should be at least")) return "La contraseña debe tener al menos 6 caracteres.";
+  return msg;
+}
+
+/* ============================================================
+   9) DASHBOARD
+   ============================================================ */
+function viewDashboardLoading(){
+  return `<main class="min-h-screen pb-24 sm:pb-10">${navbar(false)}<div class="py-24 text-center text-sand/40">Cargando tus recordatorios…</div></main>`;
+}
+async function loadReminders(){
+  const { data } = await sb.from("reminders").select("*").order("fecha",{ascending:true}).order("hora",{ascending:true});
+  STATE.reminders = data || [];
+}
+function viewDashboard(){
+  const nombre = STATE.user?.user_metadata?.nombre || "";
+  const ahora = Date.now();
+  const proximos = STATE.reminders.filter(r => new Date(`${r.fecha}T${r.hora}`).getTime() >= ahora);
+  const pasados = STATE.reminders.filter(r => new Date(`${r.fecha}T${r.hora}`).getTime() < ahora);
+  const filtrados = STATE.filtro==="todos" ? proximos : proximos.filter(r=>r.tipo===STATE.filtro);
+  const en7dias = proximos.filter(r => (new Date(`${r.fecha}T${r.hora}`).getTime()-ahora)/(1000*60*60*24) <= 7).length;
+  const citasMedicas = proximos.filter(r=>r.tipo==="cita_medica").length;
+
+  return `
+  <main class="min-h-screen pb-24 sm:pb-10">
+    <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🔔</span>
+          <div>
+            <p class="font-display text-sm font-semibold text-sand">${nombre ? `Hola, ${esc(nombre.split(" ")[0])} 👋` : "Hola 👋"}</p>
+            <p class="text-xs text-sand/40">Aquí están tus recordatorios</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+<a href="#nuevo" class="btn-primary hidden !px-4 !py-2 text-sm sm:inline-flex">➕ Nuevo</a>
+          <a href="#perfil" class="btn-secondary hidden !px-4 !py-2 text-sm sm:inline-flex">👤 Perfil</a>
+          <button id="btn-logout" class="btn-ghost !px-3 !py-2 text-sm">Salir</button>
+        </div>
+      </div>
+    </header>
+    <div class="mx-auto max-w-5xl px-5 py-6">
+      <div class="grid grid-cols-3 gap-3">
+        <div class="card p-4 text-center"><p class="font-display text-2xl font-bold text-mint-400">${proximos.length}</p><p class="mt-0.5 text-[11px] text-sand/50">Próximos</p></div>
+        <div class="card p-4 text-center"><p class="font-display text-2xl font-bold text-coral-400">${en7dias}</p><p class="mt-0.5 text-[11px] text-sand/50">Esta semana</p></div>
+        <div class="card p-4 text-center"><p class="font-display text-2xl font-bold text-sand">${citasMedicas}</p><p class="mt-0.5 text-[11px] text-sand/50">Citas médicas 🩺</p></div>
+      </div>
+      <div class="mt-6 flex gap-2 overflow-x-auto pb-1" id="filtros">
+        <button data-f="todos" class="chip whitespace-nowrap ${STATE.filtro==='todos'?'chip-active':''}">Todos</button>
+        ${Object.entries(TIPO_LABELS).map(([k,v])=>`<button data-f="${k}" class="chip whitespace-nowrap ${STATE.filtro===k?'chip-active':''}">${v.emoji} ${v.label}</button>`).join("")}
+      </div>
+      <div class="mt-6">
+        ${filtrados.length===0 ? `
+          <div class="card flex flex-col items-center gap-3 p-12 text-center">
+            <span class="text-4xl">📭</span>
+            <p class="font-display text-lg font-semibold text-sand">No tienes recordatorios próximos</p>
+            <p class="max-w-xs text-sm text-sand/50">Crea tu primera cita médica, evento o trámite para que no se te olvide.</p>
+            <a href="#nuevo" class="btn-primary mt-2">➕ Crear recordatorio</a>
+          </div>` : `
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">${filtrados.map(reminderCard).join("")}</div>`}
+      </div>
+      ${pasados.length>0 ? `
+      <details class="mt-10">
+        <summary class="cursor-pointer text-sm font-medium text-sand/40 hover:text-sand/70">Ver ${pasados.length} recordatorio(s) pasado(s)</summary>
+        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">${pasados.map(reminderCard).join("")}</div>
+      </details>` : ``}
+    </div>
+    <a href="#nuevo" class="fixed bottom-20 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-mint-500 text-2xl text-ink-950 shadow-glow sm:hidden">➕</a>
+    ${bottomNav("dashboard")}
+  </main>`;
+}
+function reminderCard(r){
+  const info = TIPO_LABELS[r.tipo];
+  const cuenta = diasRestantes(r.fecha, r.hora);
+  const anticipacionTxt = r.anticipacion_horas < 24 ? `${r.anticipacion_horas} h antes` : `${Math.round(r.anticipacion_horas/24)} día(s) antes`;
+  return `
+  <div class="card p-5 transition ${cuenta.pasado?'opacity-50':''}">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <span class="chip chip-active !cursor-default">${info.emoji} ${info.label}</span>
+      <span class="text-xs font-medium ${cuenta.urgente?'text-coral-400':'text-sand/40'}">${cuenta.texto}</span>
+    </div>
+    <h3 class="mt-3 font-display text-lg font-semibold text-sand">${esc(r.titulo)}</h3>
+    <p class="mt-1 text-sm text-sand/60">🗓️ ${formatearFechaLarga(r.fecha)} · 🕒 ${formatearHora(r.hora)} hrs</p>
+    ${r.tipo==="cita_medica" && r.centro_medico ? `<p class="mt-1 text-sm text-sand/50">🏥 ${esc(r.centro_medico)}</p>` : ``}
+    ${r.tipo==="cita_medica" && r.medico ? `<p class="text-sm text-sand/50">👨‍⚕️ ${esc(r.medico)}</p>` : ``}
+    ${r.tipo!=="cita_medica" && r.ubicacion ? `<p class="mt-1 text-sm text-sand/50">📍 ${esc(r.ubicacion)}</p>` : ``}
+    <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-sand/50">
+      ${r.avisar_whatsapp ? `<span class="rounded-full bg-mint-500/15 px-3 py-1 text-mint-400">📲 WhatsApp</span>` : ``}
+      ${r.avisar_email ? `<span class="rounded-full bg-white/5 px-3 py-1">📧 Correo</span>` : ``}
+      <span class="rounded-full bg-white/5 px-3 py-1">⏰ Aviso ${anticipacionTxt}</span>
+    </div>
+    <div class="mt-5 flex flex-wrap gap-2 border-t border-white/5 pt-4">
+      ${r.avisar_whatsapp && r.telefono_whatsapp ? `<a href="${linkWhatsApp(r)}" target="_blank" rel="noopener noreferrer" class="btn-ghost !px-3 !py-2 text-mint-400">📲 Enviar ahora</a>` : ``}
+      <a href="#editar/${r.id}" class="btn-ghost !px-3 !py-2">✏️ Editar</a>
+      <button data-del="${r.id}" class="btn-ghost !px-3 !py-2 text-coral-400">🗑️ Eliminar</button>
+    </div>
+  </div>`;
+}
+function bindDashboard(){
+  document.getElementById("btn-logout").onclick = async ()=>{ await sb.auth.signOut(); navigate("landing"); };
+  document.querySelectorAll("#filtros button").forEach(b=>{
+    b.onclick = ()=>{ STATE.filtro = b.dataset.f; render(); };
+  });
+  document.querySelectorAll("[data-del]").forEach(b=>{
+    b.onclick = async ()=>{
+      if(!confirm("¿Seguro que quieres eliminar este recordatorio?")) return;
+      await sb.from("reminders").delete().eq("id", b.dataset.del);
+      await loadReminders();
+      document.getElementById("app").innerHTML = viewDashboard();
+      bindDashboard();
+    };
+  });
+}
+
+/* ============================================================
+   10) FORMULARIO: NUEVO / EDITAR RECORDATORIO
+   ============================================================ */
+function viewForm(existing){
+  const esEdicion = !!existing;
+  const r = existing || {};
+  return `
+  <main class="min-h-screen pb-24 sm:pb-10">
+    <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-3xl items-center gap-3 px-5 py-4">
+        <a href="#dashboard" class="btn-ghost !px-2 !py-2">←</a>
+        <div>
+          <p class="font-display text-sm font-semibold text-sand">${esEdicion ? "Editar recordatorio ✏️" : "Nuevo recordatorio 🔔"}</p>
+          <p class="text-xs text-sand/40">${esEdicion ? "Actualiza los detalles" : "Completa los detalles"}</p>
+        </div>
+      </div>
+    </header>
+    <div class="mx-auto max-w-3xl px-5 py-8">
+      <form id="reminder-form" class="space-y-8">
+        <div>
+          <label class="label-field">¿Qué quieres recordar?</label>
+          <div class="flex flex-wrap gap-2" id="tipo-chips">
+            ${Object.entries(TIPO_LABELS).map(([k,v])=>`<button type="button" data-tipo="${k}" class="chip ${STATE.formTempTipo===k?'chip-active':''}">${v.emoji} ${v.label}</button>`).join("")}
+          </div>
+        </div>
+        <div>
+          <label class="label-field" id="label-titulo">${STATE.formTempTipo==="cita_medica"?"Motivo de la cita":"Título"}</label>
+          <input id="f-titulo" class="input-field" placeholder="Ej: Control cardiología" value="${esc(r.titulo)}" required />
+        </div>
+        <div class="form-grid-2">
+          <div><label class="label-field">Fecha</label><input id="f-fecha" type="date" class="input-field" value="${r.fecha||''}" required /></div>
+          <div><label class="label-field">Hora</label><input id="f-hora" type="time" class="input-field" value="${(r.hora||'').slice(0,5)}" required /></div>
+        </div>
+
+        <div id="bloque-cita" class="card space-y-5 p-5 sm:p-6 ${STATE.formTempTipo!=='cita_medica'?'hidden':''}">
+          <p class="text-sm font-medium text-mint-400">🩺 Detalles de la cita</p>
+
+          <div>
+            <label class="label-field">Centro médico o clínica</label>
+            <input id="f-centro-manual" class="input-field" placeholder="Ej: Integramédica, Clínica Dávila..." value="${esc(r.centro_medico)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
+          </div>
+
+          <div class="form-grid-2">
+            <div>
+              <label class="label-field">Especialidad</label>
+              <select id="f-especialidad" class="input-field" onchange="document.getElementById('bloque-otra-especialidad').style.display = this.value === 'otra' ? 'block' : 'none'">
+                <option value="">Selecciona una especialidad</option>
+                <option value="Medicina General" ${r.especialidad==='Medicina General'?'selected':''}>Medicina General</option>
+                <option value="Pediatría" ${r.especialidad==='Pediatría'?'selected':''}>Pediatría</option>
+                <option value="Cardiología" ${r.especialidad==='Cardiología'?'selected':''}>Cardiología</option>
+                <option value="otra" ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad)?'selected':''}>Otra especialidad...</option>
+              </select>
+              <div id="bloque-otra-especialidad" class="mt-2" style="display: ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? 'block' : 'none'};">
+                <label class="label-field text-xs">Escribe la especialidad personalizada</label>
+                <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Kinesiología, Dermatología..." value="${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? esc(r.especialidad) : ''}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
+              </div>
+            </div>
+            <div>
+              <label class="label-field">Médico(a) o profesional</label>
+              <input id="f-medico" class="input-field" placeholder="Ej: Dra. Andrea Muñoz" value="${esc(r.medico)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <div>
+              <label class="label-field">N° de ficha u orden (opcional)</label>
+              <input id="f-ficha" class="input-field" placeholder="Ej: 000123" value="${esc(r.numero_ficha)}" />
+            </div>
+            <div>
+              <label class="label-field">Dirección exacta (opcional)</label>
+              <input id="f-direccion" class="input-field" placeholder="Ej: Av. Providencia 1234, piso 5" value="${esc(r.direccion)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
+            </div>
+          </div>
+        </div>
+
+        <div id="bloque-otro" class="${STATE.formTempTipo==='cita_medica'?'hidden':''}">
+          <label class="label-field">Lugar (opcional)</label>
+          <input id="f-ubicacion" class="input-field" placeholder="Ej: Casa de mis papás / Notaría Central" value="${esc(r.ubicacion)}" />
+        </div>
+
+        <div>
+          <label class="label-field">Notas (opcional)</label>
+          <textarea id="f-notas" class="input-field min-h-[90px] resize-none" placeholder="Ej: Llevar en ayunas, traer exámenes anteriores, etc.">${esc(r.notas)}</textarea>
+        </div>
+
+        <div class="card space-y-5 p-5">
+          <p class="text-sm font-medium text-mint-400">🔔 ¿Cómo quieres que te avisemos?</p>
+          <div class="form-grid-2">
+            <label id="wrap-whatsapp" class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${ (r.avisar_whatsapp ?? true) ? 'border-mint-500/60 bg-mint-500/10' : 'border-white/10 bg-white/[0.02]'}">
+              <input type="checkbox" id="f-avisar-whatsapp" class="mt-1 accent-mint-500" ${(r.avisar_whatsapp ?? true) ? 'checked':''} />
+              <span><span class="block font-medium text-sand">📲 WhatsApp</span><span class="text-xs text-sand/50">Aviso directo a tu celular</span></span>
+            </label>
+            <label id="wrap-email" class="relative flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50 cursor-not-allowed">
+              <input type="checkbox" id="f-avisar-email" class="mt-1 accent-mint-500" disabled />
+              <span><span class="block font-medium text-sand">📧 Correo electrónico</span><span class="text-xs text-sand/50">Aviso a tu bandeja de entrada</span></span>
+              <span class="absolute right-3 top-3 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-sand/60">Próximamente</span>
+            </label>
+          </div>
+          <div id="campo-telefono" class="${(r.avisar_whatsapp ?? true)?'':'hidden'}">
+            <label class="label-field">Tu número de WhatsApp</label>
+            <input id="f-telefono" class="input-field" placeholder="Ej: +56 9 1234 5678" value="${esc(r.telefono_whatsapp)}" />
+          </div>
+                    <div>
+            <label class="label-field">¿Con cuánta anticipación te avisamos?</label>
+            <div class="flex flex-wrap gap-2 mb-3" id="anticipacion-chips">
+              ${ANTICIPACION_OPCIONES.map(o=>`<button type="button" data-ant="${o.valor}" class="chip ${(r.anticipacion_horas ?? 24)===o.valor?'chip-active':''}">⏰ ${o.label}</button>`).join("")}
+              <button type="button" id="btn-ant-personalizada" class="chip ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24)) ? 'chip-active' : ''}">⚙️ Elegir fecha y hora exacta</button>
+              <button type="button" id="btn-modo-prueba" class="chip !border-coral-400 !text-coral-400">🧪 Probar en 5 minutos</button>
+            </div>
+            
+            <div id="bloque-fecha-manual" class="form-grid-2 mt-3 p-4 bg-slate-100 rounded-xl ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24)) ? '' : 'hidden'}">
+              <div>
+                <label class="label-field text-xs">Fecha exacta del aviso</label>
+                <input id="f-fecha-aviso" type="date" class="input-field bg-white" />
+              </div>
+              <div>
+                <label class="label-field text-xs">Hora exacta del aviso</label>
+                <input id="f-hora-aviso" type="time" class="input-field bg-white" />
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div id="form-error" class="hidden rounded-xl bg-coral-500/10 px-4 py-3 text-sm text-coral-400"></div>
+
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <a href="#dashboard" class="btn-secondary text-center">Cancelar</a>
+          <button type="submit" id="form-submit" class="btn-primary">${esEdicion ? "Guardar cambios ✅" : "Crear recordatorio 🔔"}</button>
+        </div>
+      </form>
+    </div>
+    ${bottomNav("nuevo")}
+  </main>`;
+}
+
+function bindForm(){
+  const $ = id => document.getElementById(id);
+  let anticipacion = STATE.editId ? (STATE.reminders.find(r=>r.id===STATE.editId)?.anticipacion_horas ?? 24) : 24;
+  
+  if (STATE.editId) {
+    const r = STATE.reminders.find(x => x.id === STATE.editId);
+    if (r && !ANTICIPACION_OPCIONES.some(o => o.valor === r.anticipacion_horas)) {
+      anticipacion = "personalizada";
+      const fechaCita = new Date(`${r.fecha}T${r.hora}`);
+      fechaCita.setHours(fechaCita.getHours() - r.anticipacion_horas);
+      setTimeout(() => {
+        if ($("f-fecha-aviso")) $("f-fecha-aviso").value = fechaCita.toISOString().split('T')[0];
+        if ($("f-hora-aviso")) $("f-hora-aviso").value = fechaCita.toTimeString().slice(0,5);
+      }, 50);
+    }
+  }
+
+  // Tipo chips
+  document.querySelectorAll("#tipo-chips button").forEach(b=>{
+    b.onclick = ()=>{
+      STATE.formTempTipo = b.dataset.tipo;
+      document.querySelectorAll("#tipo-chips button").forEach(x=>x.className = "chip" + (x===b ? " chip-active":""));
+      $("bloque-cita").classList.toggle("hidden", STATE.formTempTipo!=="cita_medica");
+      $("bloque-otro").classList.toggle("hidden", STATE.formTempTipo==="cita_medica");
+      $("label-titulo").textContent = STATE.formTempTipo==="cita_medica" ? "Motivo de la cita" : "Título";
+    };
+  });
+
+  // Canales
+  function toggleCanal(chk, wrap, campo){
+    wrap.classList.toggle("border-mint-500/60", chk.checked);
+    wrap.classList.toggle("bg-mint-500/10", chk.checked);
+    wrap.classList.toggle("border-white/10", !chk.checked);
+    wrap.classList.toggle("bg-white/[0.02]", !chk.checked);
+    campo?.classList.toggle("hidden", !chk.checked);
+  }
+  $("f-avisar-whatsapp").onchange = ()=>toggleCanal($("f-avisar-whatsapp"), $("wrap-whatsapp"), $("campo-telefono"));
+  if($("f-avisar-email")) $("f-avisar-email").onchange = ()=>toggleCanal($("f-avisar-email"), $("wrap-email"), $("campo-email"));
+
+    // Anticipación chips
+  document.querySelectorAll("#anticipacion-chips button").forEach(b=>{
+    b.onclick = ()=>{
+      if (b.id === "btn-ant-personalizada") {
+        anticipacion = "personalizada";
+        document.querySelectorAll("#anticipacion-chips button").forEach(x => x.classList.remove("chip-active"));
+        b.classList.add("chip-active");
+        $("bloque-fecha-manual").classList.remove("hidden");
+      } else if (b.id === "btn-modo-prueba") {
+        const enCincoMin = new Date(Date.now() + 5*60000);
+        $("f-fecha").value = enCincoMin.toISOString().split("T")[0];
+        $("f-hora").value = enCincoMin.toTimeString().slice(0,5);
+        anticipacion = 0;
+        document.querySelectorAll("#anticipacion-chips button").forEach(x => x.classList.remove("chip-active"));
+        b.classList.add("chip-active");
+        $("bloque-fecha-manual").classList.add("hidden");
+      } else {
+        anticipacion = Number(b.dataset.ant);
+        document.querySelectorAll("#anticipacion-chips button").forEach(x => x.className = "chip" + (Number(x.dataset.ant)===anticipacion ? " chip-active":""));
+        $("bloque-fecha-manual").classList.add("hidden");
+      }
+    };
+  });
+
+
+  $("reminder-form").onsubmit = async (e)=>{
+    e.preventDefault();
+    $("form-error").classList.add("hidden");
+
+    const titulo = $("f-titulo").value.trim();
+    const fecha = $("f-fecha").value;
+    const hora = $("f-hora").value;
+    const avisarWhatsapp = $("f-avisar-whatsapp").checked;
+    const avisarEmail = $("f-avisar-email").checked;
+    const telefono = $("f-telefono")?.value.trim() || "";
+    const email = $("f-email")?.value.trim() || "";
+
+    if(!titulo || !fecha || !hora){ mostrarError("Completa al menos el título, la fecha y la hora."); return; }
+    if(avisarWhatsapp && !telefono){ mostrarError("Ingresa un número de WhatsApp para poder avisarte por ahí."); return; }
+    if(avisarEmail && !email){ mostrarError("Ingresa un correo para poder avisarte por email."); return; }
+
+    function mostrarError(msg){ $("form-error").textContent = "⚠️ " + msg; $("form-error").classList.remove("hidden"); }
+
+    $("form-submit").disabled = true;
+    $("form-submit").textContent = "Guardando...";
+
+    const centroMedico = STATE.formTempTipo==="cita_medica" ? ($("f-centro-manual")?.value.trim() || null) : null; 
+
+        let horasCalculadas = anticipacion;
+    if (anticipacion === "personalizada") {
+      const fechaCita = new Date(`${fecha}T${hora}`);
+      const fechaAviso = new Date(`${$("f-fecha-aviso").value}T${$("f-hora-aviso").value}`);
+      const diffMs = fechaCita.getTime() - fechaAviso.getTime();
+      horasCalculadas = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
+    }
+
+    const payload = {
+      user_id: STATE.user.id,
+      tipo: STATE.formTempTipo,
+      titulo, fecha, hora,
+      centro_medico: STATE.formTempTipo==="cita_medica" ? (centroMedico||null) : null,
+      region: null,
+      especialidad: STATE.formTempTipo==="cita_medica" ? ($("f-especialidad")?.value === "otra" ? $("f-especialidad-manual")?.value.trim() : $("f-especialidad")?.value) : null, 
+      medico: STATE.formTempTipo==="cita_medica" ? ($("f-medico")?.value || null) : null,
+      numero_ficha: STATE.formTempTipo==="cita_medica" ? ($("f-ficha")?.value || null) : null,
+      direccion: STATE.formTempTipo==="cita_medica" ? ($("f-direccion")?.value || null) : null,
+      ubicacion: STATE.formTempTipo!=="cita_medica" ? ($("f-ubicacion")?.value || null) : null,
+      notas: $("f-notas").value || null,
+      avisar_email: avisarEmail,
+      avisar_whatsapp: avisarWhatsapp,
+      email_aviso: avisarEmail ? email : null,
+      telefono_whatsapp: avisarWhatsapp ? telefono : null,
+      anticipacion_horas: horasCalculadas
+    };
+
+    try{
+      if(STATE.editId){
+        const { error } = await sb.from("reminders").update(payload).eq("id", STATE.editId);
+        if(error) throw error;
+      } else {
+        const { error } = await sb.from("reminders").insert(payload);
+        if(error) throw error;
+      }
+      if(avisarWhatsapp && telefono){
+        await sb.from("profiles").update({ telefono_whatsapp: telefono }).eq("id", STATE.user.id);
+      }
+      navigate("dashboard");
+    } catch(err){
+      mostrarError(err?.message || "No se pudo guardar el recordatorio.");
+    } finally {
+      $("form-submit").disabled = false;
+      $("form-submit").textContent = STATE.editId ? "Guardar cambios ✅" : "Crear recordatorio 🔔";
+    }
+  };
+}
+
+/* ============================================================
+   11) PERFIL
+   ============================================================ */
+function viewPerfilLoading(){
+  return `<main class="min-h-screen pb-24 sm:pb-10">${navbar(false)}<div class="py-24 text-center text-sand/40">Cargando…</div></main>`;
+}
+async function bindPerfilLoad(){
+  const { data: perfil } = await sb.from("profiles").select("nombre, telefono_whatsapp").eq("id", STATE.user.id).maybeSingle();
+  const app = document.getElementById("app");
+  app.innerHTML = `
+  <main class="min-h-screen pb-24 sm:pb-10">
+    <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl">
+      <div class="mx-auto flex max-w-2xl items-center gap-3 px-5 py-4">
+        <a href="#dashboard" class="btn-ghost !px-2 !py-2">←</a>
+        <p class="font-display text-sm font-semibold text-sand">Tu perfil 👤</p>
+      </div>
+    </header>
+    <div class="mx-auto max-w-2xl px-5 py-8">
+      <div class="card p-6 sm:p-8">
+        <p class="text-xs text-sand/40">Correo de la cuenta</p>
+        <p class="mt-1 font-display text-lg text-sand">${esc(STATE.user.email)}</p>
+        <form id="perfil-form" class="mt-6 space-y-4">
+          <div><label class="label-field">Nombre</label><input id="p-nombre" class="input-field" value="${esc(perfil?.nombre)}" /></div>
+          <div>
+            <label class="label-field">Número de WhatsApp por defecto</label>
+            <input id="p-telefono" class="input-field" placeholder="Ej: +56 9 1234 5678" value="${esc(perfil?.telefono_whatsapp)}" />
+            <p class="mt-1 text-xs text-sand/40">Se usará como valor por defecto al crear nuevos recordatorios.</p>
+          </div>
+<div>
+            <label class="label-field">API Key de CallMeBot</label>
+            <input id="p-callmebot" class="input-field" placeholder="Ej: 123456" value="${esc(perfil?.callmebot_apikey)}" />
+            <div class="mt-3 rounded-xl border border-mint-500/30 bg-mint-500/5 p-4 text-xs text-sand/70 space-y-2">
+              <p class="font-semibold text-sand">📲 Cómo activar tu WhatsApp (una sola vez):</p>
+              <ol class="list-decimal list-inside space-y-1">
+                <li>Toca el botón de abajo — abre WhatsApp con el mensaje ya escrito</li>
+                <li>Solo aprieta "Enviar" en WhatsApp</li>
+                <li>El bot te responde con un mensaje largo — busca la línea que dice <b>"Your apikey is:"</b> y copia SOLO el número que viene justo después (ignora todo el resto del mensaje)</li>
+                <li>Pega ese número arriba, en el campo "API Key de CallMeBot", y guarda cambios</li>
+              </ol>
+              <div class="mt-2 rounded-lg bg-white border border-mint-500/20 p-3">
+                <p class="text-[11px] text-sand/50 mb-1">Ejemplo de lo que responde el bot:</p>
+                <p class="text-xs font-mono text-sand/70">CallMeBot API Activated for 569XXXXXXXX<br/>Your apikey is: <span class="bg-mint-500/20 text-mint-600 font-bold px-1 rounded">9994056</span> ← <b>esto es lo único que copias</b></p>
+              </div>
+              <a href="https://wa.me/34611011637?text=I%20allow%20callmebot%20to%20send%20me%20messages" target="_blank" rel="noopener noreferrer" class="btn-primary !mt-2 w-full !py-2 text-sm">📲 Abrir WhatsApp y activar</a>
+            </div>
+          </div>
+          <div id="perfil-aviso" class="hidden rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400"></div>
+          <button type="submit" id="perfil-submit" class="btn-primary w-full">Guardar cambios</button>
+        </form>
+      </div>
+      <button id="perfil-logout" class="btn-secondary mt-6 w-full text-coral-400">Cerrar sesión</button>
+    </div>
+    ${bottomNav("perfil")}
+  </main>`;
+
+  document.getElementById("perfil-form").onsubmit = async (e)=>{
+    e.preventDefault();
+    const btn = document.getElementById("perfil-submit");
+    btn.disabled = true; btn.textContent = "Guardando...";
+await sb.from("profiles").update({
+      nombre: document.getElementById("p-nombre").value,
+      telefono_whatsapp: document.getElementById("p-telefono").value,
+callmebot_apikey: document.getElementById("p-callmebot").value
+    }).eq("id", STATE.user.id);
+    const aviso = document.getElementById("perfil-aviso");
+    aviso.textContent = "Datos guardados ✅"; aviso.classList.remove("hidden");
+    btn.disabled = false; btn.textContent = "Guardar cambios";
+  };
+  document.getElementById("perfil-logout").onclick = async ()=>{ await sb.auth.signOut(); navigate("landing"); };
+}
+</script>
+</body>
+</html>

@@ -930,6 +930,14 @@ async function bindPerfilLoad(){
             <input id="p-telefono" class="input-field" placeholder="Ej: +56 9 1234 5678" value="${esc(perfil?.telefono_whatsapp)}" />
             <p class="mt-1 text-xs text-sand/40">Se usará como valor por defecto al crear nuevos recordatorios.</p>
           </div>
+          <div>
+            <label class="label-field">API Key de CallMeBot</label>
+            <input id="p-callmebot" class="input-field" placeholder="Ej: 123456" value="${esc(perfil?.callmebot_apikey)}" />
+            <p class="mt-1 text-xs text-sand/40">
+              Agrega el contacto <b>+34 644 51 79 65</b> en WhatsApp y envíale el mensaje
+              <i>"I allow callmebot to send me messages"</i>. Te responderá con tu apikey — pégalo aquí.
+            </p>
+          </div>
           <div id="perfil-aviso" class="hidden rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400"></div>
           <button type="submit" id="perfil-submit" class="btn-primary w-full">Guardar cambios</button>
         </form>
@@ -943,9 +951,10 @@ async function bindPerfilLoad(){
     e.preventDefault();
     const btn = document.getElementById("perfil-submit");
     btn.disabled = true; btn.textContent = "Guardando...";
-    await sb.from("profiles").update({
+await sb.from("profiles").update({
       nombre: document.getElementById("p-nombre").value,
-      telefono_whatsapp: document.getElementById("p-telefono").value
+      telefono_whatsapp: document.getElementById("p-telefono").value,
+      callmebot_apikey: document.getElementById("p-callmebot").value
     }).eq("id", STATE.user.id);
     const aviso = document.getElementById("perfil-aviso");
     aviso.textContent = "Datos guardados ✅"; aviso.classList.remove("hidden");

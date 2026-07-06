@@ -720,18 +720,15 @@ function viewForm(existing){
               <input type="checkbox" id="f-avisar-whatsapp" class="mt-1 accent-mint-500" ${(r.avisar_whatsapp ?? true) ? 'checked':''} />
               <span><span class="block font-medium text-sand">📲 WhatsApp</span><span class="text-xs text-sand/50">Aviso directo a tu celular</span></span>
             </label>
-            <label id="wrap-email" class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${ (r.avisar_email ?? true) ? 'border-mint-500/60 bg-mint-500/10' : 'border-white/10 bg-white/[0.02]'}">
-              <input type="checkbox" id="f-avisar-email" class="mt-1 accent-mint-500" ${(r.avisar_email ?? true) ? 'checked':''} />
+            <label id="wrap-email" class="relative flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50 cursor-not-allowed">
+              <input type="checkbox" id="f-avisar-email" class="mt-1 accent-mint-500" disabled />
               <span><span class="block font-medium text-sand">📧 Correo electrónico</span><span class="text-xs text-sand/50">Aviso a tu bandeja de entrada</span></span>
+              <span class="absolute right-3 top-3 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-sand/60">Próximamente</span>
             </label>
           </div>
           <div id="campo-telefono" class="${(r.avisar_whatsapp ?? true)?'':'hidden'}">
             <label class="label-field">Tu número de WhatsApp</label>
             <input id="f-telefono" class="input-field" placeholder="Ej: +56 9 1234 5678" value="${esc(r.telefono_whatsapp)}" />
-          </div>
-          <div id="campo-email" class="${(r.avisar_email ?? true)?'':'hidden'}">
-            <label class="label-field">Tu correo</label>
-            <input id="f-email" type="email" class="input-field" placeholder="tucorreo@ejemplo.cl" value="${esc(r.email_aviso || STATE.user?.email || '')}" />
           </div>
                     <div>
             <label class="label-field">¿Con cuánta anticipación te avisamos?</label>

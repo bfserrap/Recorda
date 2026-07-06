@@ -75,9 +75,27 @@ export default async function handler(req, res) {
       }
 
       const telefonoLimpio = normalizarTelefono(telefono);
-      const fechaTexto = fechaHora.toLocaleDateString("es-CL", { day: "numeric", month: "long" });
+      const fechaTexto = fechaHora.toLocaleDateString("es-CL", { weekday: "long", day: "numeric", month: "long" });
       const horaTexto = r.hora.slice(0, 5);
-      const mensaje = `🔔 Recordatorio: ${r.titulo} el ${fechaTexto} a las ${horaTexto}`;
+
+      const emojiTipo = { cita_medica: "🩺", evento: "🎉", tramite: "📄", otro: "✨" }[r.tipo] || "🔔";
+      const tituloTipo = { cita_medica: "Cita médica", evento: "Evento", tramite: "Trámite", otro: "Recordatorio" }[r.tipo] || "Recordatorio";
+
+      let lineas = [];
+      lineas.push(`${emojiTipo} *${tituloTipo}*`);
+      lineas.push(`📌 ${r.titulo}`);
+      lineas.push(`📅 ${fechaTexto}, ${horaTexto} hrs`);
+      if (r.centro_medico) lineas.push(`🏥 ${r.centro_medico}`);
+      if (r.especialidad) lineas.push(`⚕️ ${r.especialidad}`);
+      if (r.medico) lineas.push(`👨‍⚕️ ${r.medico}`);
+      if (r.direccion) lineas.push(`📍 ${r.direccion}`);
+      if (r.ubicacion) lineas.push(`📍 ${r.ubicacion}`);
+      if (r.numero_ficha) lineas.push(`🎫 N° ficha: ${r.numero_ficha}`);
+      if (r.notas) lineas.push(`📝 ${r.notas}`);
+      lineas.push("");
+      lineas.push("Este mensaje es enviado desde tu aplicación Recorda 😊");
+
+      const mensaje = lineas.join("\n");
       const urlEnvio = `https://api.callmebot.com/whatsapp.php?phone=${telefonoLimpio}&text=${encodeURIComponent(mensaje)}&apikey=${apikey}`;
 
       try {

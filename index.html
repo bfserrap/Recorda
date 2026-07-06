@@ -958,9 +958,13 @@ async function bindPerfilLoad(){
               <ol class="list-decimal list-inside space-y-1">
                 <li>Toca el botón de abajo — abre WhatsApp con el mensaje ya escrito</li>
                 <li>Solo aprieta "Enviar" en WhatsApp</li>
-                <li>Espera la respuesta del bot (hasta 2 minutos) — te llegará un código</li>
-                <li>Pega ese código arriba y guarda cambios</li>
+                <li>El bot te responde con un mensaje largo — busca la línea que dice <b>"Your apikey is:"</b> y copia SOLO el número que viene justo después (ignora todo el resto del mensaje)</li>
+                <li>Pega ese número arriba, en el campo "API Key de CallMeBot", y guarda cambios</li>
               </ol>
+              <div class="mt-2 rounded-lg bg-white border border-mint-500/20 p-3">
+                <p class="text-[11px] text-sand/50 mb-1">Ejemplo de lo que responde el bot:</p>
+                <p class="text-xs font-mono text-sand/70">CallMeBot API Activated for 569XXXXXXXX<br/>Your apikey is: <span class="bg-mint-500/20 text-mint-600 font-bold px-1 rounded">9994056</span> ← <b>esto es lo único que copias</b></p>
+              </div>
               <a href="https://wa.me/34611011637?text=I%20allow%20callmebot%20to%20send%20me%20messages" target="_blank" rel="noopener noreferrer" class="btn-primary !mt-2 w-full !py-2 text-sm">📲 Abrir WhatsApp y activar</a>
             </div>
           </div>

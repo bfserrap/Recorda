@@ -82,6 +82,8 @@ export default async function handler(req, res) {
       const tituloTipo = { cita_medica: "Cita médica", evento: "Evento", tramite: "Trámite", otro: "Recordatorio" }[r.tipo] || "Recordatorio";
 
       let lineas = [];
+      lineas.push(`¡Hola! 👋 Este es tu recordatorio${r.tipo === "cita_medica" ? " de salud" : ""} 🔔`);
+      lineas.push("");
       lineas.push(`${emojiTipo} *${tituloTipo}*`);
       lineas.push(`📌 ${r.titulo}`);
       lineas.push(`📅 ${fechaTexto}, ${horaTexto} hrs`);
@@ -92,8 +94,6 @@ export default async function handler(req, res) {
       if (r.ubicacion) lineas.push(`📍 ${r.ubicacion}`);
       if (r.numero_ficha) lineas.push(`🎫 N° ficha: ${r.numero_ficha}`);
       if (r.notas) lineas.push(`📝 ${r.notas}`);
-      lineas.push("");
-      lineas.push("Este mensaje es enviado desde tu aplicación Recorda 😊");
 
       const mensaje = lineas.join("\n");
       const urlEnvio = `https://api.callmebot.com/whatsapp.php?phone=${telefonoLimpio}&text=${encodeURIComponent(mensaje)}&apikey=${apikey}`;

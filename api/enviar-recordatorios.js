@@ -143,23 +143,52 @@ export default async function handler(req, res) {
           month: "long",
         });
         const horaTexto = r.hora.slice(0, 5);
-        const emojiTipo = { cita_medica: "🩺", evento: "🎉", tramite: "📄", otro: "✨" }[r.tipo] || "🔔";
-        const tituloTipo = { cita_medica: "Cita médica", evento: "Evento", tramite: "Trámite", otro: "Recordatorio" }[r.tipo] || "Recordatorio";
+        const tipoInfo = {
+          cita_medica: { emoji: "🩺", titulo: "CITA MÉDICA" },
+          evento: { emoji: "🎉", titulo: "EVENTO" },
+          tramite: { emoji: "📄", titulo: "TRÁMITE" },
+          compra: { emoji: "🛒", titulo: "LISTA DE COMPRAS" },
+          otro: { emoji: "✨", titulo: "RECORDATORIO" },
+        }[r.tipo] || { emoji: "🔔", titulo: "RECORDATORIO" };
 
         const lineas = [
-          `¡Hola! 👋 Este es tu recordatorio${r.tipo === "cita_medica" ? " de salud" : ""} 🔔`,
-          "",
-          `${emojiTipo} *${tituloTipo}*`,
-          `📌 ${r.titulo}`,
-          `📅 ${fechaTexto}, ${horaTexto} hrs`,
+          "🔔 *RECORDA*",
+          "━━━━━━━━━━━━━━",
+          `${tipoInfo.emoji} *${tipoInfo.titulo}*`,
         ];
-        if (r.centro_medico) lineas.push(`🏥 ${r.centro_medico}`);
-        if (r.especialidad) lineas.push(`⚕️ ${r.especialidad}`);
-        if (r.medico) lineas.push(`👨‍⚕️ ${r.medico}`);
-        if (r.direccion) lineas.push(`📍 ${r.direccion}`);
-        if (r.ubicacion) lineas.push(`📍 ${r.ubicacion}`);
-        if (r.numero_ficha) lineas.push(`🎫 N° ficha: ${r.numero_ficha}`);
-        if (r.notas) lineas.push(`📝 ${r.notas}`);
+
+        if (r.tipo !== "cita_medica" && r.tipo !== "compra") {
+          lineas.push(`📌 *${r.titulo}*`);
+        }
+
+        lineas.push("", `📅 ${fechaTexto}`, `🕒 ${horaTexto} hrs`);
+
+        if (r.tipo === "cita_medica") {
+          if (r.centro_medico) lineas.push(`🏥 ${r.centro_medico}`);
+          if (r.especialidad) lineas.push(`🩺 ${r.especialidad}`);
+          if (r.medico) lineas.push(`👩‍⚕️ ${r.medico}`);
+          if (r.direccion) lineas.push(`📍 ${r.direccion}`);
+          if (r.notas) lineas.push("", `📝 *Notas:* ${r.notas}`);
+        } else if (r.tipo === "compra") {
+          const productos = (r.notas || "")
+            .split("\n")
+            .map((item) => item.trim().replace(/^[-•☐]\s*/, ""))
+            .filter(Boolean);
+          if (productos.length) {
+            lineas.push("", "🧺 *Tu lista:*", ...productos.map((item) => `▫️ ${item}`));
+          }
+        } else {
+          if (r.ubicacion) lineas.push(`📍 ${r.ubicacion}`);
+          if (r.tipo === "evento" && r.notas?.startsWith("Llevar:")) {
+            const [llevar, ...notasExtra] = r.notas.split("\n\n");
+            lineas.push("", `🎒 *Para llevar:* ${llevar.replace(/^Llevar:\s*/, "")}`);
+            if (notasExtra.join("\n\n").trim()) lineas.push(`📝 ${notasExtra.join("\n\n").trim()}`);
+          } else if (r.notas) {
+            lineas.push("", `📝 ${r.notas}`);
+          }
+        }
+
+        lineas.push("", "━━━━━━━━━━━━━━", "✨ _Recorda · todo a tiempo_");
 
         const mensaje = lineas.join("\n");
         const urlEnvio = `https://api.callmebot.com/whatsapp.php?phone=${telefonoLimpio}&text=${encodeURIComponent(mensaje)}&apikey=${apikey}`;

@@ -198,14 +198,54 @@ const CENTROS_MEDICOS_CHILE = [
     {nombre:"Clínica Magallanes",comuna:"Punta Arenas"}]}
 ];
 
-const ESPECIALIDADES_MEDICAS = ["Medicina general","Pediatría","Ginecología y obstetricia","Traumatología","Cardiología","Dermatología","Oftalmología","Otorrinolaringología","Odontología","Kinesiología","Nutrición","Psicología / Salud mental","Neurología","Urología","Endocrinología","Broncopulmonar","Gastroenterología","Reumatología","Oncología","Toma de exámenes / Laboratorio","Imagenología (ecografía, rayos X, escáner)","Otra especialidad"];
+const ESPECIALIDADES_MEDICAS = [
+  "Medicina general","Medicina interna","Pediatría","Ginecología y obstetricia",
+  "Traumatología y ortopedia","Cardiología","Cirugía general","Dermatología",
+  "Oftalmología","Otorrinolaringología","Odontología","Kinesiología",
+  "Nutrición","Psicología","Psiquiatría","Neurología","Neurocirugía",
+  "Urología","Nefrología","Endocrinología","Diabetología","Broncopulmonar",
+  "Gastroenterología","Reumatología","Oncología","Hematología","Infectología",
+  "Geriatría","Fonoaudiología","Terapia ocupacional","Matrona",
+  "Toma de exámenes / Laboratorio","Imagenología","Medicina física y rehabilitación"
+];
 
 const TIPO_LABELS = {
   cita_medica:{label:"Cita médica",emoji:"🩺"},
   evento:{label:"Evento",emoji:"🎉"},
   tramite:{label:"Trámite",emoji:"📄"},
+  compra:{label:"Compras",emoji:"🛒"},
   otro:{label:"Otro",emoji:"✨"}
 };
+
+const FORM_CONFIG = {
+  evento:{
+    titulo:"Nombre del evento",
+    placeholder:"Ej: Cumpleaños de Ana, reunión de apoderados",
+    ubicacion:"Lugar del evento (opcional)",
+    ubicacionPlaceholder:"Ej: Centro de eventos, colegio o domicilio",
+    notasPlaceholder:"Horario de llegada, contacto u otro detalle útil",
+    sugerencias:["Cumpleaños","Reunión","Matrimonio","Concierto","Actividad escolar"]
+  },
+  tramite:{
+    titulo:"¿Qué trámite debes realizar?",
+    placeholder:"Ej: Renovar licencia de conducir",
+    ubicacion:"Lugar o institución (opcional)",
+    ubicacionPlaceholder:"Ej: Municipalidad, Registro Civil, banco",
+    notasPlaceholder:"Documentos necesarios, número de atención o requisitos",
+    sugerencias:["Renovar licencia","Pagar permiso de circulación","Hora en Registro Civil","Trámite bancario","Presentar documentos"]
+  },
+  otro:{
+    titulo:"¿Qué quieres recordar?",
+    placeholder:"Ej: Llamar al técnico o pagar una cuenta",
+    ubicacion:"Lugar (opcional)",
+    ubicacionPlaceholder:"Ej: Casa, oficina o dirección",
+    notasPlaceholder:"Agrega cualquier detalle que te ayude a recordarlo",
+    sugerencias:["Pagar una cuenta","Hacer una llamada","Retirar un pedido","Mantención del auto"]
+  },
+  cita_medica:{titulo:"",placeholder:"",ubicacion:"",ubicacionPlaceholder:"",notasPlaceholder:"Ej: Ir en ayunas o llevar exámenes anteriores",sugerencias:[]},
+  compra:{titulo:"",placeholder:"",ubicacion:"",ubicacionPlaceholder:"",notasPlaceholder:"",sugerencias:[]}
+};
+
 const ANTICIPACION_OPCIONES = [
   {valor:6,label:"6 horas antes"},
   {valor:24,label:"1 día antes"},
@@ -261,21 +301,39 @@ function formatearHora(hora){
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
 function construirMensaje(r){
-  const emoji = TIPO_LABELS[r.tipo].emoji;
-  const partes = [`${emoji} *${r.titulo}*`, "",
-    `🗓️ Fecha: ${formatearFechaLarga(r.fecha)}`,
-    `🕒 Hora: ${formatearHora(r.hora)} hrs`];
-  if(r.tipo==="cita_medica"){
-    if(r.centro_medico) partes.push(`🏥 Centro: ${r.centro_medico}`);
-    if(r.especialidad) partes.push(`🩺 Especialidad: ${r.especialidad}`);
-    if(r.medico) partes.push(`👨‍⚕️ Profesional: ${r.medico}`);
-    if(r.numero_ficha) partes.push(`🔖 N° de ficha/orden: ${r.numero_ficha}`);
-    if(r.direccion) partes.push(`📍 Dirección: ${r.direccion}`);
-  } else if(r.ubicacion){ partes.push(`📍 Lugar: ${r.ubicacion}`); }
-  if(r.notas){ partes.push(""); partes.push(`📝 Notas: ${r.notas}`); }
-  partes.push("", `_Recorda 🔔 · no lo olvides_`);
+  const tipo = TIPO_LABELS[r.tipo] || TIPO_LABELS.otro;
+  const partes = ["🔔 *RECORDA*", "━━━━━━━━━━━━━━", `${tipo.emoji} *${tipo.label.toUpperCase()}*`];
+
+  if(r.tipo !== "cita_medica" && r.tipo !== "compra") partes.push(`📌 *${r.titulo}*`);
+  partes.push("", `📅 ${formatearFechaLarga(r.fecha)}`, `🕒 ${formatearHora(r.hora)} hrs`);
+
+  if(r.tipo === "cita_medica"){
+    if(r.centro_medico) partes.push(`🏥 ${r.centro_medico}`);
+    if(r.especialidad) partes.push(`🩺 ${r.especialidad}`);
+    if(r.medico) partes.push(`👩‍⚕️ ${r.medico}`);
+    if(r.direccion) partes.push(`📍 ${r.direccion}`);
+  } else if(r.tipo === "compra"){
+    const items = (r.notas || "").split("\n").map(x=>x.trim()).filter(Boolean);
+    if(items.length){
+      partes.push("", "🧺 *Tu lista:*", ...items.map(item=>`▫️ ${item.replace(/^[-•☐]\s*/,"")}`));
+    }
+  } else {
+    if(r.ubicacion) partes.push(`📍 ${r.ubicacion}`);
+    if(r.tipo === "evento" && r.notas?.startsWith("Llevar:")){
+      const [llevar, ...resto] = r.notas.split("\n\n");
+      partes.push("", `🎒 *Para llevar:* ${llevar.replace(/^Llevar:\s*/,"")}`);
+      if(resto.join("\n\n").trim()) partes.push(`📝 ${resto.join("\n\n").trim()}`);
+    } else if(r.notas){
+      partes.push("", `📝 ${r.notas}`);
+    }
+  }
+
+  if(r.tipo === "cita_medica" && r.notas) partes.push("", `📝 ${r.notas}`);
+  partes.push("", "━━━━━━━━━━━━━━", "_Recorda 🔔 · todo a tiempo_");
   return partes.join("\n");
 }
+
+
 function linkWhatsApp(r){
   const mensaje = encodeURIComponent(construirMensaje(r));
   const telefono = r.telefono_whatsapp ? normalizarTelefono(r.telefono_whatsapp) : "";
@@ -683,6 +741,12 @@ function viewForm(existing){
   const esEdicion = !!existing;
   const r = existing || {};
   const telefonoDefault = r.telefono_whatsapp || STATE.perfil?.telefono_whatsapp || "";
+  const especialidadConocida = ESPECIALIDADES_MEDICAS.includes(r.especialidad);
+  const notasEvento = r.tipo === "evento" && r.notas?.startsWith("Llevar:") ? r.notas.split("\n\n") : null;
+  const llevarDefault = notasEvento ? notasEvento[0].replace(/^Llevar:\s*/,"") : "";
+  const notasDefault = notasEvento ? notasEvento.slice(1).join("\n\n") : (r.tipo === "compra" ? "" : (r.notas || ""));
+  const configInicial = FORM_CONFIG[STATE.formTempTipo] || FORM_CONFIG.otro;
+
   return `
   <main class="min-h-screen pb-24 sm:pb-10">
     <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl">
@@ -690,279 +754,305 @@ function viewForm(existing){
         <a href="#dashboard" class="btn-ghost !px-2 !py-2">←</a>
         <div>
           <p class="font-display text-sm font-semibold text-sand">${esEdicion ? "Editar recordatorio ✏️" : "Nuevo recordatorio 🔔"}</p>
-          <p class="text-xs text-sand/40">${esEdicion ? "Actualiza los detalles" : "Completa los detalles"}</p>
+          <p class="text-xs text-sand/40">${esEdicion ? "Actualiza los detalles" : "Elige un tipo y completa solo lo necesario"}</p>
         </div>
       </div>
     </header>
     <div class="mx-auto max-w-3xl px-5 py-8">
-      <form id="reminder-form" class="space-y-8">
-        <div>
+      <form id="reminder-form" class="space-y-7">
+        <section>
           <label class="label-field">¿Qué quieres recordar?</label>
           <div class="flex flex-wrap gap-2" id="tipo-chips">
             ${Object.entries(TIPO_LABELS).map(([k,v])=>`<button type="button" data-tipo="${k}" class="chip ${STATE.formTempTipo===k?'chip-active':''}">${v.emoji} ${v.label}</button>`).join("")}
           </div>
-        </div>
-        <div>
-          <label class="label-field" id="label-titulo">${STATE.formTempTipo==="cita_medica"?"Motivo de la cita":"Título"}</label>
-          <input id="f-titulo" class="input-field" placeholder="Ej: Control cardiología" value="${esc(r.titulo)}" required />
-        </div>
-        <div class="form-grid-2">
-          <div><label class="label-field">Fecha</label><input id="f-fecha" type="date" class="input-field" value="${r.fecha||''}" required /></div>
-          <div><label class="label-field">Hora</label><input id="f-hora" type="time" class="input-field" value="${(r.hora||'').slice(0,5)}" required /></div>
-        </div>
+        </section>
 
-        <div id="bloque-cita" class="card space-y-5 p-5 sm:p-6 ${STATE.formTempTipo!=='cita_medica'?'hidden':''}">
-          <p class="text-sm font-medium text-mint-400">🩺 Detalles de la cita</p>
+        <section id="bloque-titulo" class="${['cita_medica','compra'].includes(STATE.formTempTipo)?'hidden':''}">
+          <label class="label-field" id="label-titulo">${configInicial.titulo}</label>
+          <input id="f-titulo" class="input-field" placeholder="${configInicial.placeholder}" value="${esc(r.titulo)}" />
+          <div id="sugerencias-titulo" class="mt-2 flex flex-wrap gap-2"></div>
+        </section>
 
+        <section id="bloque-fecha-hora" class="form-grid-2">
+          <div><label class="label-field" id="label-fecha">Fecha</label><input id="f-fecha" type="date" class="input-field" value="${r.fecha||''}" /></div>
+          <div><label class="label-field" id="label-hora">Hora</label><input id="f-hora" type="time" class="input-field" value="${(r.hora||'').slice(0,5)}" /></div>
+        </section>
+
+        <section id="bloque-cita" class="card space-y-5 p-5 sm:p-6 ${STATE.formTempTipo!=='cita_medica'?'hidden':''}">
+          <div><p class="font-display font-semibold text-sand">🩺 Detalles de la cita</p><p class="mt-1 text-xs text-sand/50">La fecha y hora van primero; agrega aquí la información útil para llegar preparado.</p></div>
           <div>
             <label class="label-field">Centro médico o clínica</label>
-            <input id="f-centro-manual" class="input-field" placeholder="Ej: Integramédica, Clínica Dávila..." value="${esc(r.centro_medico)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
+            <input id="f-centro-manual" class="input-field" placeholder="Ej: Clínica Dávila, CESFAM, IntegraMédica…" value="${esc(r.centro_medico)}" />
           </div>
-
+          <div>
+            <label class="label-field">Especialidad</label>
+            <select id="f-especialidad" class="input-field">
+              <option value="">Selecciona una especialidad</option>
+              ${ESPECIALIDADES_MEDICAS.map(x=>`<option value="${esc(x)}" ${r.especialidad===x?'selected':''}>${esc(x)}</option>`).join("")}
+              <option value="otra" ${r.especialidad && !especialidadConocida?'selected':''}>Otra especialidad…</option>
+            </select>
+            <div id="bloque-otra-especialidad" class="mt-2 ${r.especialidad && !especialidadConocida?'':'hidden'}">
+              <label class="label-field text-xs">Escribe la especialidad</label>
+              <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Medicina del sueño" value="${r.especialidad && !especialidadConocida ? esc(r.especialidad) : ''}" />
+            </div>
+          </div>
           <div class="form-grid-2">
-            <div>
-              <label class="label-field">Especialidad</label>
-              <select id="f-especialidad" class="input-field" onchange="document.getElementById('bloque-otra-especialidad').style.display = this.value === 'otra' ? 'block' : 'none'">
-                <option value="">Selecciona una especialidad</option>
-                <option value="Medicina General" ${r.especialidad==='Medicina General'?'selected':''}>Medicina General</option>
-                <option value="Pediatría" ${r.especialidad==='Pediatría'?'selected':''}>Pediatría</option>
-                <option value="Cardiología" ${r.especialidad==='Cardiología'?'selected':''}>Cardiología</option>
-                <option value="otra" ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad)?'selected':''}>Otra especialidad...</option>
-              </select>
-              <div id="bloque-otra-especialidad" class="mt-2" style="display: ${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? 'block' : 'none'};">
-                <label class="label-field text-xs">Escribe la especialidad personalizada</label>
-                <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Kinesiología, Dermatología..." value="${r.especialidad && !['Medicina General','Pediatría','Cardiología'].includes(r.especialidad) ? esc(r.especialidad) : ''}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
-              </div>
-            </div>
-            <div>
-              <label class="label-field">Médico(a) o profesional</label>
-              <input id="f-medico" class="input-field" placeholder="Ej: Dra. Andrea Muñoz" value="${esc(r.medico)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
-            </div>
+            <div><label class="label-field">Médico(a) o profesional <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-medico" class="input-field" placeholder="Ej: Dra. Andrea Muñoz" value="${esc(r.medico)}" /></div>
+            <div><label class="label-field">Dirección exacta <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-direccion" class="input-field" placeholder="Ej: Av. Providencia 1234, piso 5" value="${esc(r.direccion)}" /></div>
           </div>
+        </section>
 
-          <div class="form-grid-2">
-            <div>
-              <label class="label-field">N° de ficha u orden (opcional)</label>
-              <input id="f-ficha" class="input-field" placeholder="Ej: 000123" value="${esc(r.numero_ficha)}" />
+        <section id="bloque-ubicacion" class="${['cita_medica','compra'].includes(STATE.formTempTipo)?'hidden':''}">
+          <label class="label-field" id="label-ubicacion">${configInicial.ubicacion}</label>
+          <input id="f-ubicacion" class="input-field" placeholder="${configInicial.ubicacionPlaceholder}" value="${esc(r.ubicacion)}" />
+        </section>
+
+        <section id="bloque-evento" class="card space-y-4 p-5 ${STATE.formTempTipo==='evento'?'':'hidden'}">
+          <div><p class="font-display font-semibold text-sand">🎒 ¿Debes llevar algo?</p><p class="mt-1 text-xs text-sand/50">Opcional. Escribe elementos separados por coma.</p></div>
+          <input id="f-llevar" class="input-field" placeholder="Ej: regalo, entradas, chaqueta, documentos" value="${esc(llevarDefault)}" />
+        </section>
+
+        <section id="bloque-compra" class="card space-y-5 p-5 sm:p-6 ${STATE.formTempTipo==='compra'?'':'hidden'}">
+          <div><p class="font-display font-semibold text-sand">🛒 Lista de compras</p><p class="mt-1 text-xs text-sand/50">Un producto por línea para recibir una lista clara en WhatsApp.</p></div>
+          <textarea id="f-lista-compra" class="input-field min-h-[170px] resize-y" placeholder="Leche\nPan integral\nFrutas\nDetergente">${r.tipo==='compra'?esc(r.notas):''}</textarea>
+          <div>
+            <label class="label-field">¿Cuándo enviarla?</label>
+            <div class="flex flex-wrap gap-2" id="compra-modo-chips">
+              <button type="button" data-compra-modo="ahora" class="chip ${esEdicion?'':'chip-active'}">⚡ Enviar al guardar</button>
+              <button type="button" data-compra-modo="programada" class="chip ${esEdicion?'chip-active':''}">🗓️ Elegir fecha y hora</button>
             </div>
-            <div>
-              <label class="label-field">Dirección exacta (opcional)</label>
-              <input id="f-direccion" class="input-field" placeholder="Ej: Av. Providencia 1234, piso 5" value="${esc(r.direccion)}" onblur="this.value = this.value.toLowerCase().split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ')" />
-            </div>
+            <p class="mt-2 text-xs text-sand/50">El envío inmediato puede tardar hasta un minuto.</p>
           </div>
-        </div>
+        </section>
 
-        <div id="bloque-otro" class="${STATE.formTempTipo==='cita_medica'?'hidden':''}">
-          <label class="label-field">Lugar (opcional)</label>
-          <input id="f-ubicacion" class="input-field" placeholder="Ej: Casa de mis papás / Notaría Central" value="${esc(r.ubicacion)}" />
-        </div>
+        <section id="bloque-notas" class="${STATE.formTempTipo==='compra'?'hidden':''}">
+          <label class="label-field">Notas <span class="font-normal text-sand/40">(opcional)</span></label>
+          <textarea id="f-notas" class="input-field min-h-[100px] resize-y" placeholder="${configInicial.notasPlaceholder}">${esc(notasDefault)}</textarea>
+        </section>
 
-        <div>
-          <label class="label-field">Notas (opcional)</label>
-          <textarea id="f-notas" class="input-field min-h-[90px] resize-none" placeholder="Ej: Llevar en ayunas, traer exámenes anteriores, etc.">${esc(r.notas)}</textarea>
-        </div>
+        <section class="card space-y-5 p-5">
+          <div><p class="font-display font-semibold text-sand">🔔 Aviso por WhatsApp</p><p class="mt-1 text-xs text-sand/50">Recibirás un mensaje ordenado con todos los detalles.</p></div>
+          <label id="wrap-whatsapp" class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${(r.avisar_whatsapp ?? true)?'border-mint-500/60 bg-mint-500/10':'border-slate-200 bg-white'}">
+            <input type="checkbox" id="f-avisar-whatsapp" class="mt-1 accent-mint-500" ${(r.avisar_whatsapp ?? true)?'checked':''} />
+            <span><span class="block font-medium text-sand">📲 Enviar a WhatsApp</span><span class="text-xs text-sand/50">Usaremos tu número guardado o el que escribas abajo</span></span>
+          </label>
+          <div id="campo-telefono" class="${(r.avisar_whatsapp ?? true)?'':'hidden'}"><label class="label-field">Número de WhatsApp</label><input id="f-telefono" class="input-field" placeholder="Ej: +56 9 1234 5678" value="${esc(telefonoDefault)}" /></div>
+          <input type="checkbox" id="f-avisar-email" class="hidden" disabled />
 
-        <div class="card space-y-5 p-5">
-          <p class="text-sm font-medium text-mint-400">🔔 ¿Cómo quieres que te avisemos?</p>
-          <div class="form-grid-2">
-            <label id="wrap-whatsapp" class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${ (r.avisar_whatsapp ?? true) ? 'border-mint-500/60 bg-mint-500/10' : 'border-white/10 bg-white/[0.02]'}">
-              <input type="checkbox" id="f-avisar-whatsapp" class="mt-1 accent-mint-500" ${(r.avisar_whatsapp ?? true) ? 'checked':''} />
-              <span><span class="block font-medium text-sand">📲 WhatsApp</span><span class="text-xs text-sand/50">Aviso directo a tu celular</span></span>
-            </label>
-            <label id="wrap-email" class="relative flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-4 opacity-50 cursor-not-allowed">
-              <input type="checkbox" id="f-avisar-email" class="mt-1 accent-mint-500" disabled />
-              <span><span class="block font-medium text-sand">📧 Correo electrónico</span><span class="text-xs text-sand/50">Aviso a tu bandeja de entrada</span></span>
-              <span class="absolute right-3 top-3 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-sand/60">Próximamente</span>
-            </label>
-          </div>
-          <div id="campo-telefono" class="${(r.avisar_whatsapp ?? true)?'':'hidden'}">
-            <label class="label-field">Tu número de WhatsApp</label>
-            <input id="f-telefono" class="input-field" placeholder="Ej: +56 9 1234 5678" value="${esc(telefonoDefault)}" />
-          </div>
-                    <div>
-            <label class="label-field">¿Con cuánta anticipación te avisamos?</label>
-            <div class="flex flex-wrap gap-2 mb-3" id="anticipacion-chips">
+          <div id="bloque-anticipacion" class="${STATE.formTempTipo==='compra'?'hidden':''}">
+            <label class="label-field">¿Con cuánta anticipación?</label>
+            <div class="mb-3 flex flex-wrap gap-2" id="anticipacion-chips">
               ${ANTICIPACION_OPCIONES.map(o=>`<button type="button" data-ant="${o.valor}" class="chip ${(r.anticipacion_horas ?? 24)===o.valor?'chip-active':''}">⏰ ${o.label}</button>`).join("")}
-              <button type="button" id="btn-ant-personalizada" class="chip ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24)) ? 'chip-active' : ''}">⚙️ Elegir fecha y hora exacta</button>
-              <button type="button" id="btn-modo-prueba" class="chip !border-coral-400 !text-coral-400">🧪 Probar en 5 minutos</button>
+              <button type="button" id="btn-ant-personalizada" class="chip ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24))?'chip-active':''}">⚙️ Fecha y hora exacta</button>
             </div>
-            
-            <div id="bloque-fecha-manual" class="form-grid-2 mt-3 p-4 bg-slate-100 rounded-xl ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24)) ? '' : 'hidden'}">
-              <div>
-                <label class="label-field text-xs">Fecha exacta del aviso</label>
-                <input id="f-fecha-aviso" type="date" class="input-field bg-white" />
-              </div>
-              <div>
-                <label class="label-field text-xs">Hora exacta del aviso</label>
-                <input id="f-hora-aviso" type="time" class="input-field bg-white" />
-              </div>
+            <div id="bloque-fecha-manual" class="form-grid-2 rounded-xl bg-slate-100 p-4 ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24))?'':'hidden'}">
+              <div><label class="label-field text-xs">Fecha del aviso</label><input id="f-fecha-aviso" type="date" class="input-field bg-white" /></div>
+              <div><label class="label-field text-xs">Hora del aviso</label><input id="f-hora-aviso" type="time" class="input-field bg-white" /></div>
             </div>
           </div>
-
-        </div>
+        </section>
 
         <div id="form-error" class="hidden rounded-xl bg-coral-500/10 px-4 py-3 text-sm text-coral-400"></div>
-
-        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <a href="#dashboard" class="btn-secondary text-center">Cancelar</a>
-          <button type="submit" id="form-submit" class="btn-primary">${esEdicion ? "Guardar cambios ✅" : "Crear recordatorio 🔔"}</button>
-        </div>
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><a href="#dashboard" class="btn-secondary text-center">Cancelar</a><button type="submit" id="form-submit" class="btn-primary">${esEdicion?"Guardar cambios ✅":"Crear recordatorio 🔔"}</button></div>
       </form>
     </div>
     ${bottomNav("nuevo")}
   </main>`;
 }
 
+
 function bindForm(){
   const $ = id => document.getElementById(id);
   let anticipacion = STATE.editId ? (STATE.reminders.find(r=>r.id===STATE.editId)?.anticipacion_horas ?? 24) : 24;
-  
-  if (STATE.editId) {
-    const r = STATE.reminders.find(x => x.id === STATE.editId);
-    if (r && !ANTICIPACION_OPCIONES.some(o => o.valor === r.anticipacion_horas)) {
+  let compraModo = STATE.editId ? "programada" : "ahora";
+
+  if(STATE.editId){
+    const r = STATE.reminders.find(x=>x.id===STATE.editId);
+    if(r && !ANTICIPACION_OPCIONES.some(o=>o.valor===r.anticipacion_horas)){
       anticipacion = "personalizada";
       const fechaCita = new Date(`${r.fecha}T${r.hora}`);
       fechaCita.setHours(fechaCita.getHours() - r.anticipacion_horas);
-      setTimeout(() => {
-        if ($("f-fecha-aviso")) $("f-fecha-aviso").value = fechaCita.toISOString().split('T')[0];
-        if ($("f-hora-aviso")) $("f-hora-aviso").value = fechaCita.toTimeString().slice(0,5);
-      }, 50);
+      setTimeout(()=>{
+        if($("f-fecha-aviso")) $("f-fecha-aviso").value = fechaCita.toISOString().split("T")[0];
+        if($("f-hora-aviso")) $("f-hora-aviso").value = fechaCita.toTimeString().slice(0,5);
+      },50);
     }
   }
 
-  // Tipo chips
+  function renderSugerencias(config){
+    const contenedor = $("sugerencias-titulo");
+    contenedor.innerHTML = (config.sugerencias||[]).map(s=>`<button type="button" class="chip !px-3 !py-1.5" data-sugerencia="${esc(s)}">${esc(s)}</button>`).join("");
+    contenedor.querySelectorAll("button").forEach(b=>b.onclick=()=>{$("f-titulo").value=b.dataset.sugerencia;});
+  }
+
+  function actualizarTipo(){
+    const tipo = STATE.formTempTipo;
+    const config = FORM_CONFIG[tipo] || FORM_CONFIG.otro;
+    const esCita = tipo === "cita_medica";
+    const esCompra = tipo === "compra";
+    $("bloque-titulo").classList.toggle("hidden", esCita || esCompra);
+    $("bloque-cita").classList.toggle("hidden", !esCita);
+    $("bloque-compra").classList.toggle("hidden", !esCompra);
+    $("bloque-evento").classList.toggle("hidden", tipo !== "evento");
+    $("bloque-ubicacion").classList.toggle("hidden", esCita || esCompra);
+    $("bloque-notas").classList.toggle("hidden", esCompra);
+    $("bloque-anticipacion").classList.toggle("hidden", esCompra);
+    $("label-titulo").textContent = config.titulo;
+    $("f-titulo").placeholder = config.placeholder;
+    $("label-ubicacion").textContent = config.ubicacion;
+    $("f-ubicacion").placeholder = config.ubicacionPlaceholder;
+    $("f-notas").placeholder = config.notasPlaceholder;
+    renderSugerencias(config);
+    actualizarModoCompra();
+  }
+
+  function actualizarModoCompra(){
+    const esCompra = STATE.formTempTipo === "compra";
+    $("bloque-fecha-hora").classList.toggle("hidden", esCompra && compraModo === "ahora");
+    if(esCompra){
+      $("label-fecha").textContent = "Fecha de envío";
+      $("label-hora").textContent = "Hora de envío";
+      $("f-avisar-whatsapp").checked = true;
+      $("f-avisar-whatsapp").disabled = true;
+      $("campo-telefono").classList.remove("hidden");
+    } else {
+      $("label-fecha").textContent = "Fecha";
+      $("label-hora").textContent = "Hora";
+      $("f-avisar-whatsapp").disabled = false;
+    }
+  }
+
   document.querySelectorAll("#tipo-chips button").forEach(b=>{
-    b.onclick = ()=>{
-      STATE.formTempTipo = b.dataset.tipo;
-      document.querySelectorAll("#tipo-chips button").forEach(x=>x.className = "chip" + (x===b ? " chip-active":""));
-      $("bloque-cita").classList.toggle("hidden", STATE.formTempTipo!=="cita_medica");
-      $("bloque-otro").classList.toggle("hidden", STATE.formTempTipo==="cita_medica");
-      $("label-titulo").textContent = STATE.formTempTipo==="cita_medica" ? "Motivo de la cita" : "Título";
+    b.onclick=()=>{
+      STATE.formTempTipo=b.dataset.tipo;
+      document.querySelectorAll("#tipo-chips button").forEach(x=>x.className="chip"+(x===b?" chip-active":""));
+      actualizarTipo();
     };
   });
 
-  // Canales
-  function toggleCanal(chk, wrap, campo){
-    wrap.classList.toggle("border-mint-500/60", chk.checked);
-    wrap.classList.toggle("bg-mint-500/10", chk.checked);
-    wrap.classList.toggle("border-white/10", !chk.checked);
-    wrap.classList.toggle("bg-white/[0.02]", !chk.checked);
-    campo?.classList.toggle("hidden", !chk.checked);
-  }
-  $("f-avisar-whatsapp").onchange = ()=>toggleCanal($("f-avisar-whatsapp"), $("wrap-whatsapp"), $("campo-telefono"));
-  if($("f-avisar-email")) $("f-avisar-email").onchange = ()=>toggleCanal($("f-avisar-email"), $("wrap-email"), $("campo-email"));
+  document.querySelectorAll("#compra-modo-chips button").forEach(b=>{
+    b.onclick=()=>{
+      compraModo=b.dataset.compraModo;
+      document.querySelectorAll("#compra-modo-chips button").forEach(x=>x.className="chip"+(x===b?" chip-active":""));
+      actualizarModoCompra();
+    };
+  });
 
-    // Anticipación chips
+  $("f-especialidad").onchange=()=>$("bloque-otra-especialidad").classList.toggle("hidden", $("f-especialidad").value!=="otra");
+
+  function toggleCanal(){
+    const checked=$("f-avisar-whatsapp").checked;
+    $("wrap-whatsapp").classList.toggle("border-mint-500/60",checked);
+    $("wrap-whatsapp").classList.toggle("bg-mint-500/10",checked);
+    $("campo-telefono").classList.toggle("hidden",!checked);
+  }
+  $("f-avisar-whatsapp").onchange=toggleCanal;
+
   document.querySelectorAll("#anticipacion-chips button").forEach(b=>{
-    b.onclick = ()=>{
-      if (b.id === "btn-ant-personalizada") {
-        anticipacion = "personalizada";
-        document.querySelectorAll("#anticipacion-chips button").forEach(x => x.classList.remove("chip-active"));
+    b.onclick=()=>{
+      if(b.id==="btn-ant-personalizada"){
+        anticipacion="personalizada";
+        document.querySelectorAll("#anticipacion-chips button").forEach(x=>x.classList.remove("chip-active"));
         b.classList.add("chip-active");
         $("bloque-fecha-manual").classList.remove("hidden");
-      } else if (b.id === "btn-modo-prueba") {
-        const enCincoMin = new Date(Date.now() + 5*60000);
-        const yyyy = enCincoMin.getFullYear();
-        const mm = String(enCincoMin.getMonth()+1).padStart(2,"0");
-        const dd = String(enCincoMin.getDate()).padStart(2,"0");
-        $("f-fecha").value = `${yyyy}-${mm}-${dd}`;
-        $("f-hora").value = enCincoMin.toTimeString().slice(0,5);
-        anticipacion = 0;
-        document.querySelectorAll("#anticipacion-chips button").forEach(x => x.classList.remove("chip-active"));
-        b.classList.add("chip-active");
-        $("bloque-fecha-manual").classList.add("hidden");
       } else {
-        anticipacion = Number(b.dataset.ant);
-        document.querySelectorAll("#anticipacion-chips button").forEach(x => x.className = "chip" + (Number(x.dataset.ant)===anticipacion ? " chip-active":""));
+        anticipacion=Number(b.dataset.ant);
+        document.querySelectorAll("#anticipacion-chips button").forEach(x=>x.className="chip"+(Number(x.dataset.ant)===anticipacion?" chip-active":""));
         $("bloque-fecha-manual").classList.add("hidden");
       }
     };
   });
 
+  actualizarTipo();
 
-  $("reminder-form").onsubmit = async (e)=>{
+  $("reminder-form").onsubmit=async(e)=>{
     e.preventDefault();
     $("form-error").classList.add("hidden");
+    const mostrarError=msg=>{$("form-error").textContent="⚠️ "+msg;$("form-error").classList.remove("hidden");};
 
-    // Revalida la sesión: si el celular descargó la pestaña y la sesión
-    // no se restauró a tiempo, evita guardar con un usuario inválido.
     if(!STATE.user){
-      const { data } = await sb.auth.getSession();
-      STATE.user = data.session?.user || null;
+      const {data}=await sb.auth.getSession();
+      STATE.user=data.session?.user||null;
     }
-    if(!STATE.user){
-      $("form-error").textContent = "⚠️ Tu sesión se cerró. Vuelve a iniciar sesión e intenta de nuevo.";
-      $("form-error").classList.remove("hidden");
-      return;
-    }
+    if(!STATE.user){mostrarError("Tu sesión se cerró. Vuelve a iniciar sesión.");return;}
 
-    const titulo = $("f-titulo").value.trim();
-    const fecha = $("f-fecha").value;
-    const hora = $("f-hora").value;
-    const avisarWhatsapp = $("f-avisar-whatsapp").checked;
-    const avisarEmail = $("f-avisar-email").checked;
-    const telefono = $("f-telefono")?.value.trim() || "";
-    const email = $("f-email")?.value.trim() || "";
+    const tipo=STATE.formTempTipo;
+    const esCompra=tipo==="compra";
+    const esCita=tipo==="cita_medica";
+    let fecha=$("f-fecha").value;
+    let hora=$("f-hora").value;
 
-    if(!titulo || !fecha || !hora){ mostrarError("Completa al menos el título, la fecha y la hora."); return; }
-    if(avisarWhatsapp && !telefono){ mostrarError("Ingresa un número de WhatsApp para poder avisarte por ahí."); return; }
-    if(avisarEmail && !email){ mostrarError("Ingresa un correo para poder avisarte por email."); return; }
-
-    function mostrarError(msg){ $("form-error").textContent = "⚠️ " + msg; $("form-error").classList.remove("hidden"); }
-
-    $("form-submit").disabled = true;
-    $("form-submit").textContent = "Guardando...";
-
-    const centroMedico = STATE.formTempTipo==="cita_medica" ? ($("f-centro-manual")?.value.trim() || null) : null; 
-
-        let horasCalculadas = anticipacion;
-    if (anticipacion === "personalizada") {
-      const fechaCita = new Date(`${fecha}T${hora}`);
-      const fechaAviso = new Date(`${$("f-fecha-aviso").value}T${$("f-hora-aviso").value}`);
-      const diffMs = fechaCita.getTime() - fechaAviso.getTime();
-      horasCalculadas = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
+    if(esCompra && compraModo==="ahora"){
+      const ahora=new Date();
+      fecha=`${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,"0")}-${String(ahora.getDate()).padStart(2,"0")}`;
+      hora=`${String(ahora.getHours()).padStart(2,"0")}:${String(ahora.getMinutes()).padStart(2,"0")}`;
     }
 
-    const payload = {
-      user_id: STATE.user.id,
-      tipo: STATE.formTempTipo,
-      titulo, fecha, hora,
-      centro_medico: STATE.formTempTipo==="cita_medica" ? (centroMedico||null) : null,
-      region: null,
-      especialidad: STATE.formTempTipo==="cita_medica" ? ($("f-especialidad")?.value === "otra" ? $("f-especialidad-manual")?.value.trim() : $("f-especialidad")?.value) : null, 
-      medico: STATE.formTempTipo==="cita_medica" ? ($("f-medico")?.value || null) : null,
-      numero_ficha: STATE.formTempTipo==="cita_medica" ? ($("f-ficha")?.value || null) : null,
-      direccion: STATE.formTempTipo==="cita_medica" ? ($("f-direccion")?.value || null) : null,
-      ubicacion: STATE.formTempTipo!=="cita_medica" ? ($("f-ubicacion")?.value || null) : null,
-      notas: $("f-notas").value || null,
-      avisar_email: avisarEmail,
-      avisar_whatsapp: avisarWhatsapp,
-      email_aviso: avisarEmail ? email : null,
-      telefono_whatsapp: avisarWhatsapp ? telefono : null,
-      anticipacion_horas: horasCalculadas,
-      notificado: false
+    const especialidad=$("f-especialidad").value==="otra" ? $("f-especialidad-manual").value.trim() : $("f-especialidad").value;
+    const centro=$("f-centro-manual").value.trim();
+    const listaCompra=$("f-lista-compra").value.split("\n").map(x=>x.trim()).filter(Boolean).join("\n");
+    let titulo=esCita ? (especialidad?`Cita médica · ${especialidad}`:"Cita médica") : (esCompra?"Lista de compras":$("f-titulo").value.trim());
+
+    if(!fecha||!hora){mostrarError(esCompra?"Elige cuándo enviar la lista.":"Completa la fecha y la hora.");return;}
+    if(!esCita&&!esCompra&&!titulo){mostrarError("Escribe un título para el recordatorio.");return;}
+    if(esCita&&(!centro||!especialidad)){mostrarError("Completa el centro médico y la especialidad.");return;}
+    if(esCompra&&!listaCompra){mostrarError("Agrega al menos un producto a la lista.");return;}
+
+    const telefono=$("f-telefono").value.trim();
+    const avisarWhatsapp=esCompra?true:$("f-avisar-whatsapp").checked;
+    if(avisarWhatsapp&&!telefono){mostrarError("Ingresa tu número de WhatsApp.");return;}
+
+    let horasCalculadas=esCompra?0:anticipacion;
+    if(!esCompra&&anticipacion==="personalizada"){
+      if(!$("f-fecha-aviso").value||!$("f-hora-aviso").value){mostrarError("Completa la fecha y hora exacta del aviso.");return;}
+      const fechaCita=new Date(`${fecha}T${hora}`);
+      const fechaAviso=new Date(`${$("f-fecha-aviso").value}T${$("f-hora-aviso").value}`);
+      const diffMs=fechaCita.getTime()-fechaAviso.getTime();
+      if(diffMs<0){mostrarError("El aviso no puede quedar después del recordatorio.");return;}
+      horasCalculadas=Math.max(0,Math.round(diffMs/(1000*60*60)));
+    }
+
+    let notas=$("f-notas").value.trim()||null;
+    if(tipo==="evento"&&$("f-llevar").value.trim()) notas=`Llevar: ${$("f-llevar").value.trim()}${notas?`\n\n${notas}`:""}`;
+    if(esCompra) notas=listaCompra;
+
+    const payload={
+      user_id:STATE.user.id,
+      tipo,
+      titulo,fecha,hora,
+      centro_medico:esCita?centro:null,
+      region:null,
+      especialidad:esCita?especialidad:null,
+      medico:esCita?($("f-medico").value.trim()||null):null,
+      numero_ficha:null,
+      direccion:esCita?($("f-direccion").value.trim()||null):null,
+      ubicacion:(!esCita&&!esCompra)?($("f-ubicacion").value.trim()||null):null,
+      notas,
+      avisar_email:false,
+      avisar_whatsapp:avisarWhatsapp,
+      email_aviso:null,
+      telefono_whatsapp:avisarWhatsapp?telefono:null,
+      anticipacion_horas:horasCalculadas,
+      notificado:false
     };
 
+    $("form-submit").disabled=true;
+    $("form-submit").textContent="Guardando…";
     try{
-      if(STATE.editId){
-        const { error } = await sb.from("reminders").update(payload).eq("id", STATE.editId);
-        if(error) throw error;
-      } else {
-        const { error } = await sb.from("reminders").insert(payload);
-        if(error) throw error;
-      }
-      if(avisarWhatsapp && telefono){
-        await sb.from("profiles").upsert({ id: STATE.user.id, telefono_whatsapp: telefono });
-      }
+      const consulta=STATE.editId?sb.from("reminders").update(payload).eq("id",STATE.editId):sb.from("reminders").insert(payload);
+      const {error}=await consulta;
+      if(error) throw error;
+      if(avisarWhatsapp&&telefono) await sb.from("profiles").upsert({id:STATE.user.id,telefono_whatsapp:telefono});
       navigate("dashboard");
-    } catch(err){
-      mostrarError(err?.message || "No se pudo guardar el recordatorio.");
-    } finally {
-      $("form-submit").disabled = false;
-      $("form-submit").textContent = STATE.editId ? "Guardar cambios ✅" : "Crear recordatorio 🔔";
+    }catch(err){
+      mostrarError(err?.message||"No se pudo guardar el recordatorio.");
+    }finally{
+      $("form-submit").disabled=false;
+      $("form-submit").textContent=STATE.editId?"Guardar cambios ✅":"Crear recordatorio 🔔";
     }
   };
 }
+
 
 /* ============================================================
    11) PERFIL

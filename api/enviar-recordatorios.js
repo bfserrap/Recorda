@@ -143,13 +143,17 @@ export default async function handler(req, res) {
           month: "long",
         });
         const horaTexto = r.hora.slice(0, 5);
+        // Las compras se guardan como "otro" para ser compatibles con bases
+        // antiguas que restringen los valores permitidos en la columna tipo.
+        const esCompra = r.tipo === "compra" || (r.tipo === "otro" && r.titulo === "🛒 Lista de compras");
+        const tipoReal = esCompra ? "compra" : r.tipo;
         const tipoInfo = {
           cita_medica: { emoji: "🩺", titulo: "CITA MÉDICA" },
           evento: { emoji: "🎉", titulo: "EVENTO" },
           tramite: { emoji: "📄", titulo: "TRÁMITE" },
           compra: { emoji: "🛒", titulo: "LISTA DE COMPRAS" },
           otro: { emoji: "✨", titulo: "RECORDATORIO" },
-        }[r.tipo] || { emoji: "🔔", titulo: "RECORDATORIO" };
+        }[tipoReal] || { emoji: "🔔", titulo: "RECORDATORIO" };
 
         const lineas = [
           "🔔 *RECORDA*",
@@ -157,7 +161,7 @@ export default async function handler(req, res) {
           `${tipoInfo.emoji} *${tipoInfo.titulo}*`,
         ];
 
-        if (r.tipo !== "cita_medica" && r.tipo !== "compra") {
+        if (r.tipo !== "cita_medica" && !esCompra) {
           lineas.push(`📌 *${r.titulo}*`);
         }
 
@@ -169,7 +173,7 @@ export default async function handler(req, res) {
           if (r.medico) lineas.push(`👩‍⚕️ ${r.medico}`);
           if (r.direccion) lineas.push(`📍 ${r.direccion}`);
           if (r.notas) lineas.push("", `📝 *Notas:* ${r.notas}`);
-        } else if (r.tipo === "compra") {
+        } else if (esCompra) {
           const productos = (r.notas || "")
             .split("\n")
             .map((item) => item.trim().replace(/^[-•☐]\s*/, ""))

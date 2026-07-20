@@ -300,6 +300,14 @@ function formatearHora(hora){
   const [h,m] = hora.split(":").map(Number);
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
+function normalizarTextoPresentacion(valor){
+  return String(valor || "").split("\n").map(linea=>{
+    const limpio=linea.trim().replace(/\s+/g," ");
+    if(!limpio) return "";
+    return limpio.charAt(0).toLocaleUpperCase("es-CL")+limpio.slice(1).toLocaleLowerCase("es-CL");
+  }).join("\n");
+}
+
 function construirMensaje(r){
   const tipo = TIPO_LABELS[r.tipo] || TIPO_LABELS.otro;
   const saludos = {
@@ -311,31 +319,31 @@ function construirMensaje(r){
   };
   const partes = [saludos[r.tipo] || saludos.otro, "", `${tipo.emoji} *${tipo.label}*`];
 
-  if(r.tipo !== "cita_medica" && r.tipo !== "compra") partes.push(`📌 *${r.titulo}*`);
+  if(r.tipo !== "cita_medica" && r.tipo !== "compra") partes.push(`📌 *${normalizarTextoPresentacion(r.titulo)}*`);
   partes.push("", `📅 ${formatearFechaLarga(r.fecha)}`, `🕒 ${formatearHora(r.hora)} hrs`);
 
   if(r.tipo === "cita_medica"){
-    if(r.centro_medico) partes.push(`🏥 ${r.centro_medico}`);
-    if(r.especialidad) partes.push(`🩺 ${r.especialidad}`);
-    if(r.medico) partes.push(`👩‍⚕️ ${r.medico}`);
-    if(r.direccion) partes.push(`📍 ${r.direccion}`);
+    if(r.centro_medico) partes.push(`🏥 ${normalizarTextoPresentacion(r.centro_medico)}`);
+    if(r.especialidad) partes.push(`🩺 ${normalizarTextoPresentacion(r.especialidad)}`);
+    if(r.medico) partes.push(`👩‍⚕️ ${normalizarTextoPresentacion(r.medico)}`);
+    if(r.direccion) partes.push(`📍 ${normalizarTextoPresentacion(r.direccion)}`);
   } else if(r.tipo === "compra"){
     const items = (r.notas || "").split("\n").map(x=>x.trim()).filter(Boolean);
     if(items.length){
-      partes.push("", "🧺 *Tu lista:*", ...items.map(item=>`▪️ ${item.replace(/^[-•☐▪▫️]\s*/,"")}`));
+      partes.push("", "🧺 *Tu lista:*", ...items.map(item=>`- ${normalizarTextoPresentacion(item.replace(/^[-•☐▪▫️]\s*/,""))}`));
     }
   } else {
-    if(r.ubicacion) partes.push(`📍 ${r.ubicacion}`);
+    if(r.ubicacion) partes.push(`📍 ${normalizarTextoPresentacion(r.ubicacion)}`);
     if(r.tipo === "evento" && r.notas?.startsWith("Llevar:")){
       const [llevar, ...resto] = r.notas.split("\n\n");
-      partes.push("", `🎒 *Para llevar:* ${llevar.replace(/^Llevar:\s*/,"")}`);
-      if(resto.join("\n\n").trim()) partes.push(`📝 ${resto.join("\n\n").trim()}`);
+      partes.push("", `🎒 *Para llevar:* ${normalizarTextoPresentacion(llevar.replace(/^Llevar:\s*/,""))}`);
+      if(resto.join("\n\n").trim()) partes.push(`📝 ${normalizarTextoPresentacion(resto.join("\n\n"))}`);
     } else if(r.notas){
-      partes.push("", `📝 ${r.notas}`);
+      partes.push("", `📝 ${normalizarTextoPresentacion(r.notas)}`);
     }
   }
 
-  if(r.tipo === "cita_medica" && r.notas) partes.push("", `📝 ${r.notas}`);
+  if(r.tipo === "cita_medica" && r.notas) partes.push("", `📝 ${normalizarTextoPresentacion(r.notas)}`);
   return partes.join("\n");
 }
 
@@ -752,6 +760,9 @@ function viewForm(existing){
   const llevarDefault = notasEvento ? notasEvento[0].replace(/^Llevar:\s*/,"") : "";
   const notasDefault = notasEvento ? notasEvento.slice(1).join("\n\n") : (r.tipo === "compra" ? "" : (r.notas || ""));
   const productosCompra = r.tipo === "compra" ? (r.notas || "").split("\n").map(x=>x.trim()).filter(Boolean) : [""];
+  const estadoAvisos = String(r.region || "").startsWith("__avisos:") ? (()=>{try{return JSON.parse(String(r.region).slice(9));}catch{return null;}})() : null;
+  const avisosSeleccionados = estadoAvisos?.todos?.length ? estadoAvisos.todos.map(Number) : [Number(r.anticipacion_horas ?? 24)];
+  const avisoPersonalizado = avisosSeleccionados.find(h=>!ANTICIPACION_OPCIONES.some(o=>o.valor===h));
   const configInicial = FORM_CONFIG[STATE.formTempTipo] || FORM_CONFIG.otro;
 
   return `
@@ -851,12 +862,13 @@ function viewForm(existing){
           <input type="checkbox" id="f-avisar-email" class="hidden" disabled />
 
           <div id="bloque-anticipacion" class="${STATE.formTempTipo==='compra'?'hidden':''}">
-            <label class="label-field">¿Con cuánta anticipación?</label>
+            <label class="label-field">¿Cuándo quieres recibir avisos?</label>
+            <p class="mb-3 text-xs text-sand/50">Puedes elegir más de una opción, por ejemplo 1 día y 6 horas antes.</p>
             <div class="mb-3 flex flex-wrap gap-2" id="anticipacion-chips">
-              ${ANTICIPACION_OPCIONES.map(o=>`<button type="button" data-ant="${o.valor}" class="chip ${(r.anticipacion_horas ?? 24)===o.valor?'chip-active':''}">⏰ ${o.label}</button>`).join("")}
-              <button type="button" id="btn-ant-personalizada" class="chip ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24))?'chip-active':''}">⚙️ Fecha y hora exacta</button>
+              ${ANTICIPACION_OPCIONES.map(o=>`<button type="button" data-ant="${o.valor}" class="chip ${avisosSeleccionados.includes(o.valor)?'chip-active':''}">⏰ ${o.label}</button>`).join("")}
+              <button type="button" id="btn-ant-personalizada" class="chip ${avisoPersonalizado!==undefined?'chip-active':''}">⚙️ Fecha y hora exacta</button>
             </div>
-            <div id="bloque-fecha-manual" class="form-grid-2 rounded-xl bg-slate-100 p-4 ${!ANTICIPACION_OPCIONES.some(o=>o.valor===(r.anticipacion_horas??24))?'':'hidden'}">
+            <div id="bloque-fecha-manual" class="form-grid-2 rounded-xl bg-slate-100 p-4 ${avisoPersonalizado!==undefined?'':'hidden'}">
               <div><label class="label-field text-xs">Fecha del aviso</label><input id="f-fecha-aviso" type="date" class="input-field bg-white" /></div>
               <div><label class="label-field text-xs">Hora del aviso</label><input id="f-hora-aviso" type="time" class="input-field bg-white" /></div>
             </div>
@@ -874,15 +886,23 @@ function viewForm(existing){
 
 function bindForm(){
   const $ = id => document.getElementById(id);
-  let anticipacion = STATE.editId ? (STATE.reminders.find(r=>r.id===STATE.editId)?.anticipacion_horas ?? 24) : 24;
+  const normalizarTexto = valor => String(valor || "").split("\n").map(linea=>{
+    const limpio=linea.trim().replace(/\s+/g," ");
+    if(!limpio) return "";
+    return limpio.charAt(0).toLocaleUpperCase("es-CL")+limpio.slice(1).toLocaleLowerCase("es-CL");
+  }).join("\n");
+  const recordatorioEditado = STATE.editId ? STATE.reminders.find(r=>r.id===STATE.editId) : null;
+  const estadoAvisosEditado = String(recordatorioEditado?.region || "").startsWith("__avisos:") ? (()=>{try{return JSON.parse(String(recordatorioEditado.region).slice(9));}catch{return null;}})() : null;
+  const avisosIniciales = estadoAvisosEditado?.todos?.length ? estadoAvisosEditado.todos.map(Number) : [Number(recordatorioEditado?.anticipacion_horas ?? 24)];
+  const anticipaciones = new Set(avisosIniciales.filter(h=>ANTICIPACION_OPCIONES.some(o=>o.valor===h)));
+  let anticipacionPersonalizada = avisosIniciales.find(h=>!ANTICIPACION_OPCIONES.some(o=>o.valor===h));
   let compraModo = STATE.editId ? "programada" : "ahora";
 
   if(STATE.editId){
     const r = STATE.reminders.find(x=>x.id===STATE.editId);
-    if(r && !ANTICIPACION_OPCIONES.some(o=>o.valor===r.anticipacion_horas)){
-      anticipacion = "personalizada";
+    if(r && anticipacionPersonalizada!==undefined){
       const fechaCita = new Date(`${r.fecha}T${r.hora}`);
-      fechaCita.setHours(fechaCita.getHours() - r.anticipacion_horas);
+      fechaCita.setHours(fechaCita.getHours() - anticipacionPersonalizada);
       setTimeout(()=>{
         if($("f-fecha-aviso")) $("f-fecha-aviso").value = fechaCita.toISOString().split("T")[0];
         if($("f-hora-aviso")) $("f-hora-aviso").value = fechaCita.toTimeString().slice(0,5);
@@ -934,6 +954,8 @@ function bindForm(){
   }
 
   function prepararFilaProducto(fila){
+    const campo=fila.querySelector(".f-producto");
+    campo.onblur=()=>{campo.value=normalizarTexto(campo.value);};
     const boton=fila.querySelector(".btn-eliminar-producto");
     if(boton) boton.onclick=()=>{
       const filas=document.querySelectorAll("#lista-compra-items .compra-item");
@@ -954,6 +976,10 @@ function bindForm(){
   }
 
   document.querySelectorAll("#lista-compra-items .compra-item").forEach(prepararFilaProducto);
+  ["f-titulo","f-centro-manual","f-especialidad-manual","f-medico","f-direccion","f-ubicacion","f-llevar","f-notas","p-nombre"].forEach(id=>{
+    const campo=$(id);
+    if(campo) campo.onblur=()=>{campo.value=normalizarTexto(campo.value);};
+  });
   $("btn-agregar-producto").onclick=agregarProducto;
   $("lista-compra-items").onkeydown=e=>{
     if(e.key==="Enter"&&e.target.classList.contains("f-producto")){
@@ -991,14 +1017,14 @@ function bindForm(){
   document.querySelectorAll("#anticipacion-chips button").forEach(b=>{
     b.onclick=()=>{
       if(b.id==="btn-ant-personalizada"){
-        anticipacion="personalizada";
-        document.querySelectorAll("#anticipacion-chips button").forEach(x=>x.classList.remove("chip-active"));
-        b.classList.add("chip-active");
-        $("bloque-fecha-manual").classList.remove("hidden");
+        const activar=!b.classList.contains("chip-active");
+        b.classList.toggle("chip-active",activar);
+        $("bloque-fecha-manual").classList.toggle("hidden",!activar);
+        if(!activar) anticipacionPersonalizada=undefined;
       } else {
-        anticipacion=Number(b.dataset.ant);
-        document.querySelectorAll("#anticipacion-chips button").forEach(x=>x.className="chip"+(Number(x.dataset.ant)===anticipacion?" chip-active":""));
-        $("bloque-fecha-manual").classList.add("hidden");
+        const horas=Number(b.dataset.ant);
+        if(anticipaciones.has(horas)) anticipaciones.delete(horas); else anticipaciones.add(horas);
+        b.classList.toggle("chip-active",anticipaciones.has(horas));
       }
     };
   });
@@ -1028,10 +1054,10 @@ function bindForm(){
       hora=`${String(ahora.getHours()).padStart(2,"0")}:${String(ahora.getMinutes()).padStart(2,"0")}`;
     }
 
-    const especialidad=$("f-especialidad").value==="otra" ? $("f-especialidad-manual").value.trim() : $("f-especialidad").value;
-    const centro=$("f-centro-manual").value.trim();
-    const listaCompra=[...document.querySelectorAll(".f-producto")].map(x=>x.value.trim()).filter(Boolean).join("\n");
-    let titulo=esCita ? (especialidad?`Cita médica · ${especialidad}`:"Cita médica") : (esCompra?"🛒 Lista de compras":$("f-titulo").value.trim());
+    const especialidad=normalizarTexto($("f-especialidad").value==="otra" ? $("f-especialidad-manual").value : $("f-especialidad").value);
+    const centro=normalizarTexto($("f-centro-manual").value);
+    const listaCompra=[...document.querySelectorAll(".f-producto")].map(x=>normalizarTexto(x.value)).filter(Boolean).join("\n");
+    let titulo=esCita ? (especialidad?`Cita médica · ${especialidad}`:"Cita médica") : (esCompra?"🛒 Lista de compras":normalizarTexto($("f-titulo").value));
 
     if(!fecha||!hora){mostrarError(esCompra?"Elige cuándo enviar la lista.":"Completa la fecha y la hora.");return;}
     if(!esCita&&!esCompra&&!titulo){mostrarError("Escribe un título para el recordatorio.");return;}
@@ -1042,18 +1068,22 @@ function bindForm(){
     const avisarWhatsapp=esCompra?true:$("f-avisar-whatsapp").checked;
     if(avisarWhatsapp&&!telefono){mostrarError("Ingresa tu número de WhatsApp.");return;}
 
-    let horasCalculadas=esCompra?0:anticipacion;
-    if(!esCompra&&anticipacion==="personalizada"){
+    let horasAvisos=esCompra?[0]:[...anticipaciones];
+    if(!esCompra&&$("btn-ant-personalizada").classList.contains("chip-active")){
       if(!$("f-fecha-aviso").value||!$("f-hora-aviso").value){mostrarError("Completa la fecha y hora exacta del aviso.");return;}
       const fechaCita=new Date(`${fecha}T${hora}`);
       const fechaAviso=new Date(`${$("f-fecha-aviso").value}T${$("f-hora-aviso").value}`);
       const diffMs=fechaCita.getTime()-fechaAviso.getTime();
       if(diffMs<0){mostrarError("El aviso no puede quedar después del recordatorio.");return;}
-      horasCalculadas=Math.max(0,Math.round(diffMs/(1000*60*60)));
+      anticipacionPersonalizada=Math.max(0,Math.round(diffMs/(1000*60*60)));
+      horasAvisos.push(anticipacionPersonalizada);
     }
+    horasAvisos=[...new Set(horasAvisos.map(Number))].sort((a,b)=>b-a);
+    if(!esCompra&&!horasAvisos.length){mostrarError("Selecciona al menos un momento para recibir el aviso.");return;}
+    const horasCalculadas=Math.max(...horasAvisos);
 
-    let notas=$("f-notas").value.trim()||null;
-    if(tipo==="evento"&&$("f-llevar").value.trim()) notas=`Llevar: ${$("f-llevar").value.trim()}${notas?`\n\n${notas}`:""}`;
+    let notas=normalizarTexto($("f-notas").value)||null;
+    if(tipo==="evento"&&$("f-llevar").value.trim()) notas=`Llevar: ${normalizarTexto($("f-llevar").value)}${notas?`\n\n${notas}`:""}`;
     if(esCompra) notas=listaCompra;
 
     const payload={
@@ -1063,10 +1093,10 @@ function bindForm(){
       centro_medico:esCita?centro:null,
       region:null,
       especialidad:esCita?especialidad:null,
-      medico:esCita?($("f-medico").value.trim()||null):null,
+      medico:esCita?(normalizarTexto($("f-medico").value)||null):null,
       numero_ficha:null,
-      direccion:esCita?($("f-direccion").value.trim()||null):null,
-      ubicacion:(!esCita&&!esCompra)?($("f-ubicacion").value.trim()||null):null,
+      direccion:esCita?(normalizarTexto($("f-direccion").value)||null):null,
+      ubicacion:(!esCita&&!esCompra)?(normalizarTexto($("f-ubicacion").value)||null):null,
       notas,
       avisar_email:false,
       avisar_whatsapp:avisarWhatsapp,
@@ -1075,6 +1105,7 @@ function bindForm(){
       anticipacion_horas:horasCalculadas,
       notificado:false
     };
+    payload.region=`__avisos:${JSON.stringify({todos:horasAvisos,enviados:[]})}`;
 
     $("form-submit").disabled=true;
     $("form-submit").textContent="Guardando…";
@@ -1157,7 +1188,7 @@ async function bindPerfilLoad(){
     btn.disabled = true; btn.textContent = "Guardando...";
 const { error: guardarError } = await sb.from("profiles").upsert({
       id: STATE.user.id,
-      nombre: document.getElementById("p-nombre").value,
+      nombre: normalizarTextoPresentacion(document.getElementById("p-nombre").value),
       telefono_whatsapp: document.getElementById("p-telefono").value,
       callmebot_apikey: document.getElementById("p-callmebot").value
     });
@@ -1169,7 +1200,7 @@ const { error: guardarError } = await sb.from("profiles").upsert({
       aviso.textContent = "⚠️ No se pudo guardar: " + guardarError.message;
     } else {
       STATE.perfil = {
-        nombre: document.getElementById("p-nombre").value,
+        nombre: normalizarTextoPresentacion(document.getElementById("p-nombre").value),
         telefono_whatsapp: document.getElementById("p-telefono").value,
         callmebot_apikey: document.getElementById("p-callmebot").value
       };

@@ -32,6 +32,14 @@ export default async function handler(req, res) {
     return limpio;
   }
 
+  function normalizarTexto(valor) {
+    return String(valor || "").split("\n").map((linea) => {
+      const limpio = linea.trim().replace(/\s+/g, " ");
+      if (!limpio) return "";
+      return limpio.charAt(0).toLocaleUpperCase("es-CL") + limpio.slice(1).toLocaleLowerCase("es-CL");
+    }).join("\n");
+  }
+
   // Convierte una fecha/hora ingresada en Chile a un instante UTC real.
   // Intl incorpora automáticamente los cambios de horario de verano/invierno.
   function fechaLocalAUTC(fecha, hora, timeZone = APP_TIME_ZONE) {
@@ -77,11 +85,11 @@ export default async function handler(req, res) {
     return new Date(candidato);
   }
 
-  async function marcarNotificado(id) {
+  async function actualizarEstadoAvisos(id, region, notificado) {
     const respuesta = await fetch(`${SUPABASE_URL}/rest/v1/reminders?id=eq.${id}`, {
       method: "PATCH",
       headers: { ...headers, Prefer: "return=minimal" },
-      body: JSON.stringify({ notificado: true }),
+      body: JSON.stringify({ region, notificado }),
     });
 
     if (!respuesta.ok) {
@@ -108,10 +116,15 @@ export default async function handler(req, res) {
     for (const r of reminders) {
       try {
         const fechaHora = fechaLocalAUTC(r.fecha, r.hora);
-        const horasAntic = Number(r.anticipacion_horas ?? 24);
-        const fechaAviso = new Date(fechaHora.getTime() - horasAntic * 3600 * 1000);
+        let estadoAvisos;
+        if (String(r.region || "").startsWith("__avisos:")) {
+          try { estadoAvisos = JSON.parse(String(r.region).slice(9)); } catch { estadoAvisos = null; }
+        }
+        const todosAvisos = (estadoAvisos?.todos?.length ? estadoAvisos.todos : [Number(r.anticipacion_horas ?? 24)]).map(Number);
+        const yaEnviados = new Set((estadoAvisos?.enviados || []).map(Number));
+        const avisosVencidos = todosAvisos.filter((horas) => !yaEnviados.has(horas) && ahora >= fechaHora.getTime() - horas * 3600 * 1000);
 
-        if (ahora < fechaAviso.getTime()) {
+        if (!avisosVencidos.length) {
           pendientes++;
           continue;
         }
@@ -158,33 +171,33 @@ export default async function handler(req, res) {
         const lineas = [tipoInfo.saludo, "", `${tipoInfo.emoji} *${tipoInfo.titulo}*`];
 
         if (r.tipo !== "cita_medica" && !esCompra) {
-          lineas.push(`📌 *${r.titulo}*`);
+          lineas.push(`📌 *${normalizarTexto(r.titulo)}*`);
         }
 
         lineas.push("", `📅 ${fechaTexto}`, `🕒 ${horaTexto} hrs`);
 
         if (r.tipo === "cita_medica") {
-          if (r.centro_medico) lineas.push(`🏥 ${r.centro_medico}`);
-          if (r.especialidad) lineas.push(`🩺 ${r.especialidad}`);
-          if (r.medico) lineas.push(`👩‍⚕️ ${r.medico}`);
-          if (r.direccion) lineas.push(`📍 ${r.direccion}`);
-          if (r.notas) lineas.push("", `📝 *Notas:* ${r.notas}`);
+          if (r.centro_medico) lineas.push(`🏥 ${normalizarTexto(r.centro_medico)}`);
+          if (r.especialidad) lineas.push(`🩺 ${normalizarTexto(r.especialidad)}`);
+          if (r.medico) lineas.push(`👩‍⚕️ ${normalizarTexto(r.medico)}`);
+          if (r.direccion) lineas.push(`📍 ${normalizarTexto(r.direccion)}`);
+          if (r.notas) lineas.push("", `📝 *Notas:* ${normalizarTexto(r.notas)}`);
         } else if (esCompra) {
           const productos = (r.notas || "")
             .split("\n")
             .map((item) => item.trim().replace(/^[-•☐]\s*/, ""))
             .filter(Boolean);
           if (productos.length) {
-            lineas.push("", "🧺 *Tu lista:*", ...productos.map((item) => `▪️ ${item}`));
+            lineas.push("", "🧺 *Tu lista:*", ...productos.map((item) => `- ${normalizarTexto(item)}`));
           }
         } else {
-          if (r.ubicacion) lineas.push(`📍 ${r.ubicacion}`);
+          if (r.ubicacion) lineas.push(`📍 ${normalizarTexto(r.ubicacion)}`);
           if (r.tipo === "evento" && r.notas?.startsWith("Llevar:")) {
             const [llevar, ...notasExtra] = r.notas.split("\n\n");
-            lineas.push("", `🎒 *Para llevar:* ${llevar.replace(/^Llevar:\s*/, "")}`);
-            if (notasExtra.join("\n\n").trim()) lineas.push(`📝 ${notasExtra.join("\n\n").trim()}`);
+            lineas.push("", `🎒 *Para llevar:* ${normalizarTexto(llevar.replace(/^Llevar:\s*/, ""))}`);
+            if (notasExtra.join("\n\n").trim()) lineas.push(`📝 ${normalizarTexto(notasExtra.join("\n\n"))}`);
           } else if (r.notas) {
-            lineas.push("", `📝 ${r.notas}`);
+            lineas.push("", `📝 ${normalizarTexto(r.notas)}`);
           }
         }
 
@@ -202,7 +215,10 @@ export default async function handler(req, res) {
           continue;
         }
 
-        await marcarNotificado(r.id);
+        avisosVencidos.forEach((horas) => yaEnviados.add(horas));
+        const completo = todosAvisos.every((horas) => yaEnviados.has(horas));
+        const regionActualizada = `__avisos:${JSON.stringify({ todos: todosAvisos, enviados: [...yaEnviados] })}`;
+        await actualizarEstadoAvisos(r.id, regionActualizada, completo);
         enviados++;
       } catch (error) {
         errores.push({ id: r.id, motivo: String(error?.message || error) });

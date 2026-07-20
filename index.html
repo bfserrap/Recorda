@@ -631,7 +631,7 @@ async function loadReminders(){
     STATE.reminders = [];
     return;
   }
-  STATE.reminders = data || [];
+  STATE.reminders = (data || []).map(r => r.tipo === "otro" && r.titulo === "🛒 Lista de compras" ? {...r, tipo:"compra"} : r);
 }
 function viewDashboard(){
   const nombre = STATE.user?.user_metadata?.nombre || "";
@@ -991,7 +991,7 @@ function bindForm(){
     const especialidad=$("f-especialidad").value==="otra" ? $("f-especialidad-manual").value.trim() : $("f-especialidad").value;
     const centro=$("f-centro-manual").value.trim();
     const listaCompra=$("f-lista-compra").value.split("\n").map(x=>x.trim()).filter(Boolean).join("\n");
-    let titulo=esCita ? (especialidad?`Cita médica · ${especialidad}`:"Cita médica") : (esCompra?"Lista de compras":$("f-titulo").value.trim());
+    let titulo=esCita ? (especialidad?`Cita médica · ${especialidad}`:"Cita médica") : (esCompra?"🛒 Lista de compras":$("f-titulo").value.trim());
 
     if(!fecha||!hora){mostrarError(esCompra?"Elige cuándo enviar la lista.":"Completa la fecha y la hora.");return;}
     if(!esCita&&!esCompra&&!titulo){mostrarError("Escribe un título para el recordatorio.");return;}
@@ -1018,7 +1018,7 @@ function bindForm(){
 
     const payload={
       user_id:STATE.user.id,
-      tipo,
+      tipo:esCompra?"otro":tipo,
       titulo,fecha,hora,
       centro_medico:esCita?centro:null,
       region:null,

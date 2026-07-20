@@ -302,7 +302,14 @@ function formatearHora(hora){
 }
 function construirMensaje(r){
   const tipo = TIPO_LABELS[r.tipo] || TIPO_LABELS.otro;
-  const partes = ["🔔 *RECORDA*", "━━━━━━━━━━━━━━", `${tipo.emoji} *${tipo.label.toUpperCase()}*`];
+  const saludos = {
+    cita_medica: "¡Hola! 👋 Este es tu recordatorio de salud 🔔",
+    evento: "¡Hola! 👋 Tienes un evento próximo 🎉",
+    tramite: "¡Hola! 👋 Tienes un trámite pendiente 📄",
+    compra: "¡Hola! 👋 Esta es tu lista de compras 🛒",
+    otro: "¡Hola! 👋 Tienes un recordatorio 🔔"
+  };
+  const partes = [saludos[r.tipo] || saludos.otro, "", `${tipo.emoji} *${tipo.label}*`];
 
   if(r.tipo !== "cita_medica" && r.tipo !== "compra") partes.push(`📌 *${r.titulo}*`);
   partes.push("", `📅 ${formatearFechaLarga(r.fecha)}`, `🕒 ${formatearHora(r.hora)} hrs`);
@@ -315,7 +322,7 @@ function construirMensaje(r){
   } else if(r.tipo === "compra"){
     const items = (r.notas || "").split("\n").map(x=>x.trim()).filter(Boolean);
     if(items.length){
-      partes.push("", "🧺 *Tu lista:*", ...items.map(item=>`▫️ ${item.replace(/^[-•☐]\s*/,"")}`));
+      partes.push("", "🧺 *Tu lista:*", ...items.map(item=>`▪️ ${item.replace(/^[-•☐▪▫️]\s*/,"")}`));
     }
   } else {
     if(r.ubicacion) partes.push(`📍 ${r.ubicacion}`);
@@ -329,7 +336,6 @@ function construirMensaje(r){
   }
 
   if(r.tipo === "cita_medica" && r.notas) partes.push("", `📝 ${r.notas}`);
-  partes.push("", "━━━━━━━━━━━━━━", "_Recorda 🔔 · todo a tiempo_");
   return partes.join("\n");
 }
 
@@ -745,6 +751,7 @@ function viewForm(existing){
   const notasEvento = r.tipo === "evento" && r.notas?.startsWith("Llevar:") ? r.notas.split("\n\n") : null;
   const llevarDefault = notasEvento ? notasEvento[0].replace(/^Llevar:\s*/,"") : "";
   const notasDefault = notasEvento ? notasEvento.slice(1).join("\n\n") : (r.tipo === "compra" ? "" : (r.notas || ""));
+  const productosCompra = r.tipo === "compra" ? (r.notas || "").split("\n").map(x=>x.trim()).filter(Boolean) : [""];
   const configInicial = FORM_CONFIG[STATE.formTempTipo] || FORM_CONFIG.otro;
 
   return `
@@ -813,8 +820,12 @@ function viewForm(existing){
         </section>
 
         <section id="bloque-compra" class="card space-y-5 p-5 sm:p-6 ${STATE.formTempTipo==='compra'?'':'hidden'}">
-          <div><p class="font-display font-semibold text-sand">🛒 Lista de compras</p><p class="mt-1 text-xs text-sand/50">Un producto por línea para recibir una lista clara en WhatsApp.</p></div>
-          <textarea id="f-lista-compra" class="input-field min-h-[170px] resize-y" placeholder="Leche\nPan integral\nFrutas\nDetergente">${r.tipo==='compra'?esc(r.notas):''}</textarea>
+          <div><p class="font-display font-semibold text-sand">🛒 Lista de compras</p><p class="mt-1 text-xs text-sand/50">Agrega cada producto por separado. Es rápido y el mensaje llegará bien ordenado.</p></div>
+          <div id="lista-compra-items" class="space-y-2">
+            ${(productosCompra.length?productosCompra:[""]).map(item=>`<div class="compra-item flex items-center gap-2"><input class="input-field f-producto" placeholder="Ej: Leche" value="${esc(item)}" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg" aria-label="Eliminar producto">×</button></div>`).join("")}
+          </div>
+          <button type="button" id="btn-agregar-producto" class="btn-secondary w-full sm:w-auto">＋ Agregar producto</button>
+          <p class="text-xs text-sand/50">También puedes presionar Enter para agregar el siguiente producto.</p>
           <div>
             <label class="label-field">¿Cuándo enviarla?</label>
             <div class="flex flex-wrap gap-2" id="compra-modo-chips">
@@ -922,6 +933,35 @@ function bindForm(){
     }
   }
 
+  function prepararFilaProducto(fila){
+    const boton=fila.querySelector(".btn-eliminar-producto");
+    if(boton) boton.onclick=()=>{
+      const filas=document.querySelectorAll("#lista-compra-items .compra-item");
+      if(filas.length===1){
+        fila.querySelector(".f-producto").value="";
+        fila.querySelector(".f-producto").focus();
+      } else fila.remove();
+    };
+  }
+
+  function agregarProducto(){
+    const fila=document.createElement("div");
+    fila.className="compra-item flex items-center gap-2";
+    fila.innerHTML='<input class="input-field f-producto" placeholder="Ej: Leche" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg" aria-label="Eliminar producto">×</button>';
+    $("lista-compra-items").appendChild(fila);
+    prepararFilaProducto(fila);
+    fila.querySelector(".f-producto").focus();
+  }
+
+  document.querySelectorAll("#lista-compra-items .compra-item").forEach(prepararFilaProducto);
+  $("btn-agregar-producto").onclick=agregarProducto;
+  $("lista-compra-items").onkeydown=e=>{
+    if(e.key==="Enter"&&e.target.classList.contains("f-producto")){
+      e.preventDefault();
+      agregarProducto();
+    }
+  };
+
   document.querySelectorAll("#tipo-chips button").forEach(b=>{
     b.onclick=()=>{
       STATE.formTempTipo=b.dataset.tipo;
@@ -990,7 +1030,7 @@ function bindForm(){
 
     const especialidad=$("f-especialidad").value==="otra" ? $("f-especialidad-manual").value.trim() : $("f-especialidad").value;
     const centro=$("f-centro-manual").value.trim();
-    const listaCompra=$("f-lista-compra").value.split("\n").map(x=>x.trim()).filter(Boolean).join("\n");
+    const listaCompra=[...document.querySelectorAll(".f-producto")].map(x=>x.value.trim()).filter(Boolean).join("\n");
     let titulo=esCita ? (especialidad?`Cita médica · ${especialidad}`:"Cita médica") : (esCompra?"🛒 Lista de compras":$("f-titulo").value.trim());
 
     if(!fecha||!hora){mostrarError(esCompra?"Elige cuándo enviar la lista.":"Completa la fecha y la hora.");return;}

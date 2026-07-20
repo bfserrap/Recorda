@@ -148,18 +148,14 @@ export default async function handler(req, res) {
         const esCompra = r.tipo === "compra" || (r.tipo === "otro" && r.titulo === "🛒 Lista de compras");
         const tipoReal = esCompra ? "compra" : r.tipo;
         const tipoInfo = {
-          cita_medica: { emoji: "🩺", titulo: "CITA MÉDICA" },
-          evento: { emoji: "🎉", titulo: "EVENTO" },
-          tramite: { emoji: "📄", titulo: "TRÁMITE" },
-          compra: { emoji: "🛒", titulo: "LISTA DE COMPRAS" },
-          otro: { emoji: "✨", titulo: "RECORDATORIO" },
-        }[tipoReal] || { emoji: "🔔", titulo: "RECORDATORIO" };
+          cita_medica: { emoji: "🩺", titulo: "Cita médica", saludo: "¡Hola! 👋 Este es tu recordatorio de salud 🔔" },
+          evento: { emoji: "🎉", titulo: "Evento", saludo: "¡Hola! 👋 Tienes un evento próximo 🎉" },
+          tramite: { emoji: "📄", titulo: "Trámite", saludo: "¡Hola! 👋 Tienes un trámite pendiente 📄" },
+          compra: { emoji: "🛒", titulo: "Lista de compras", saludo: "¡Hola! 👋 Esta es tu lista de compras 🛒" },
+          otro: { emoji: "✨", titulo: "Recordatorio", saludo: "¡Hola! 👋 Tienes un recordatorio 🔔" },
+        }[tipoReal] || { emoji: "🔔", titulo: "Recordatorio", saludo: "¡Hola! 👋 Tienes un recordatorio 🔔" };
 
-        const lineas = [
-          "🔔 *RECORDA*",
-          "━━━━━━━━━━━━━━",
-          `${tipoInfo.emoji} *${tipoInfo.titulo}*`,
-        ];
+        const lineas = [tipoInfo.saludo, "", `${tipoInfo.emoji} *${tipoInfo.titulo}*`];
 
         if (r.tipo !== "cita_medica" && !esCompra) {
           lineas.push(`📌 *${r.titulo}*`);
@@ -179,7 +175,7 @@ export default async function handler(req, res) {
             .map((item) => item.trim().replace(/^[-•☐]\s*/, ""))
             .filter(Boolean);
           if (productos.length) {
-            lineas.push("", "🧺 *Tu lista:*", ...productos.map((item) => `▫️ ${item}`));
+            lineas.push("", "🧺 *Tu lista:*", ...productos.map((item) => `▪️ ${item}`));
           }
         } else {
           if (r.ubicacion) lineas.push(`📍 ${r.ubicacion}`);
@@ -191,8 +187,6 @@ export default async function handler(req, res) {
             lineas.push("", `📝 ${r.notas}`);
           }
         }
-
-        lineas.push("", "━━━━━━━━━━━━━━", "✨ _Recorda · todo a tiempo_");
 
         const mensaje = lineas.join("\n");
         const urlEnvio = `https://api.callmebot.com/whatsapp.php?phone=${telefonoLimpio}&text=${encodeURIComponent(mensaje)}&apikey=${apikey}`;

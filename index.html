@@ -308,6 +308,27 @@ function normalizarTextoPresentacion(valor){
   }).join("\n");
 }
 
+// Los contactos se guardan como JSON en el campo existente telefono_whatsapp.
+// Así las instalaciones anteriores siguen funcionando sin requerir una migración.
+function contactosWhatsApp(perfil = STATE.perfil){
+  const bruto = perfil?.telefono_whatsapp;
+  try {
+    const contactos = JSON.parse(bruto || "[]");
+    if(Array.isArray(contactos)) return contactos.filter(c=>c && c.id && c.telefono)
+      .map(c=>({id:String(c.id),nombre:c.nombre||"WhatsApp",telefono:c.telefono,apikey:c.apikey||"",activo:c.activo!==false}));
+  } catch(_) {}
+  return bruto ? [{id:"principal",nombre:"Mi WhatsApp",telefono:bruto,apikey:perfil?.callmebot_apikey||"",activo:true}] : [];
+}
+function destinatariosRecordatorio(recordatorio, contactos = contactosWhatsApp()){
+  const bruto = recordatorio?.telefono_whatsapp || "";
+  try {
+    const ids = JSON.parse(bruto);
+    if(Array.isArray(ids)) return contactos.filter(c=>ids.includes(c.id));
+  } catch(_) {}
+  return bruto ? contactos.filter(c=>normalizarTelefono(c.telefono)===normalizarTelefono(bruto)) : [];
+}
+function contactosActivos(){ return contactosWhatsApp().filter(c=>c.activo); }
+
 function construirMensaje(r){
   const tipo = TIPO_LABELS[r.tipo] || TIPO_LABELS.otro;
   const saludos = {
@@ -350,7 +371,7 @@ function construirMensaje(r){
 
 function linkWhatsApp(r){
   const mensaje = encodeURIComponent(construirMensaje(r));
-  const telefono = r.telefono_whatsapp ? normalizarTelefono(r.telefono_whatsapp) : "";
+  const telefono = destinatariosRecordatorio(r)[0]?.telefono || "";
   return `https://wa.me/${telefono}?text=${mensaje}`;
 }
 function diasRestantes(fecha,hora){
@@ -709,6 +730,7 @@ function reminderCard(r){
   const info = TIPO_LABELS[r.tipo];
   const cuenta = diasRestantes(r.fecha, r.hora);
   const anticipacionTxt = r.anticipacion_horas < 24 ? `${r.anticipacion_horas} h antes` : `${Math.round(r.anticipacion_horas/24)} día(s) antes`;
+  const destinatarios = destinatariosRecordatorio(r);
   return `
   <div class="card p-5 transition ${cuenta.pasado?'opacity-50':''}">
     <div class="flex flex-wrap items-center justify-between gap-2">
@@ -721,12 +743,12 @@ function reminderCard(r){
     ${r.tipo==="cita_medica" && r.medico ? `<p class="text-sm text-sand/50">👨‍⚕️ ${esc(r.medico)}</p>` : ``}
     ${r.tipo!=="cita_medica" && r.ubicacion ? `<p class="mt-1 text-sm text-sand/50">📍 ${esc(r.ubicacion)}</p>` : ``}
     <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-sand/50">
-      ${r.avisar_whatsapp ? `<span class="rounded-full bg-mint-500/15 px-3 py-1 text-mint-400">📲 WhatsApp</span>` : ``}
+      ${r.avisar_whatsapp ? `<span class="rounded-full bg-mint-500/15 px-3 py-1 text-mint-400">📲 ${destinatarios.length ? esc(destinatarios.map(d=>d.nombre).join(", ")) : "WhatsApp"}</span>` : ``}
       ${r.avisar_email ? `<span class="rounded-full bg-white/5 px-3 py-1">📧 Correo</span>` : ``}
       <span class="rounded-full bg-white/5 px-3 py-1">⏰ Aviso ${anticipacionTxt}</span>
     </div>
     <div class="mt-5 flex flex-wrap gap-2 border-t border-white/5 pt-4">
-      ${r.avisar_whatsapp && r.telefono_whatsapp ? `<a href="${linkWhatsApp(r)}" target="_blank" rel="noopener noreferrer" class="btn-ghost !px-3 !py-2 text-mint-400" title="Esto es solo una vista previa manual — el aviso real llega solo, automáticamente">📲 Vista previa</a>` : ``}
+      ${r.avisar_whatsapp && destinatarios.length ? `<a href="${linkWhatsApp(r)}" target="_blank" rel="noopener noreferrer" class="btn-ghost !px-3 !py-2 text-mint-400" title="Esto es solo una vista previa manual — el aviso real llega solo, automáticamente">📲 Vista previa</a>` : ``}
       <a href="#editar/${r.id}" class="btn-ghost !px-3 !py-2">✏️ Editar</a>
       <button data-del="${r.id}" class="btn-ghost !px-3 !py-2 text-coral-400">🗑️ Eliminar</button>
     </div>
@@ -754,7 +776,9 @@ function bindDashboard(){
 function viewForm(existing){
   const esEdicion = !!existing;
   const r = existing || {};
-  const telefonoDefault = r.telefono_whatsapp || STATE.perfil?.telefono_whatsapp || "";
+  const contactos = contactosWhatsApp();
+  const contactosDisponibles = contactos.filter(c=>c.activo);
+  const destinatariosIniciales = esEdicion ? destinatariosRecordatorio(r, contactos).map(c=>c.id) : contactosDisponibles.map(c=>c.id);
   const especialidadConocida = ESPECIALIDADES_MEDICAS.includes(r.especialidad);
   const notasEvento = r.tipo === "evento" && r.notas?.startsWith("Llevar:") ? r.notas.split("\n\n") : null;
   const llevarDefault = notasEvento ? notasEvento[0].replace(/^Llevar:\s*/,"") : "";
@@ -853,12 +877,16 @@ function viewForm(existing){
         </section>
 
         <section class="card space-y-5 p-5">
-          <div><p class="font-display font-semibold text-sand">🔔 Aviso por WhatsApp</p><p class="mt-1 text-xs text-sand/50">Recibirás un mensaje ordenado con todos los detalles.</p></div>
+          <div><p class="font-display font-semibold text-sand">🔔 Aviso por WhatsApp</p><p class="mt-1 text-xs text-sand/50">Elige uno o más destinatarios activos para este recordatorio.</p></div>
           <label id="wrap-whatsapp" class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${(r.avisar_whatsapp ?? true)?'border-mint-500/60 bg-mint-500/10':'border-slate-200 bg-white'}">
             <input type="checkbox" id="f-avisar-whatsapp" class="mt-1 accent-mint-500" ${(r.avisar_whatsapp ?? true)?'checked':''} />
-            <span><span class="block font-medium text-sand">📲 Enviar a WhatsApp</span><span class="text-xs text-sand/50">Usaremos tu número guardado o el que escribas abajo</span></span>
+            <span><span class="block font-medium text-sand">📲 Enviar a WhatsApp</span><span class="text-xs text-sand/50">Selecciona los números a los que quieres avisar</span></span>
           </label>
-          <div id="campo-telefono" class="${(r.avisar_whatsapp ?? true)?'':'hidden'}"><label class="label-field">Número de WhatsApp</label><input id="f-telefono" class="input-field" placeholder="Ej: +56 9 1234 5678" value="${esc(telefonoDefault)}" /></div>
+          <div id="campo-telefono" class="${(r.avisar_whatsapp ?? true)?'':'hidden'} space-y-2">
+            <label class="label-field">Enviar a</label>
+            ${contactosDisponibles.length ? contactosDisponibles.map(c=>`<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><input type="checkbox" class="f-destinatario accent-mint-500" value="${esc(c.id)}" ${destinatariosIniciales.includes(c.id)?'checked':''} /><span class="min-w-0"><span class="block font-medium text-sand">${esc(c.nombre)}</span><span class="block text-xs text-sand/50">${esc(c.telefono)}</span></span></label>`).join("") : `<div class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">No tienes números activos. Agrégalos o actívalos en tu perfil.</div>`}
+            <a href="#perfil" class="btn-ghost !px-0 !py-1 text-sm">⚙️ Administrar números</a>
+          </div>
           <input type="checkbox" id="f-avisar-email" class="hidden" disabled />
 
           <div id="bloque-anticipacion" class="${STATE.formTempTipo==='compra'?'hidden':''}">
@@ -1064,9 +1092,9 @@ function bindForm(){
     if(esCita&&(!centro||!especialidad)){mostrarError("Completa el centro médico y la especialidad.");return;}
     if(esCompra&&!listaCompra){mostrarError("Agrega al menos un producto a la lista.");return;}
 
-    const telefono=$("f-telefono").value.trim();
     const avisarWhatsapp=esCompra?true:$("f-avisar-whatsapp").checked;
-    if(avisarWhatsapp&&!telefono){mostrarError("Ingresa tu número de WhatsApp.");return;}
+    const destinatarios=[...document.querySelectorAll(".f-destinatario:checked")].map(x=>x.value);
+    if(avisarWhatsapp&&!destinatarios.length){mostrarError("Selecciona al menos un número de WhatsApp activo.");return;}
 
     let horasAvisos=esCompra?[0]:[...anticipaciones];
     if(!esCompra&&$("btn-ant-personalizada").classList.contains("chip-active")){
@@ -1101,7 +1129,7 @@ function bindForm(){
       avisar_email:false,
       avisar_whatsapp:avisarWhatsapp,
       email_aviso:null,
-      telefono_whatsapp:avisarWhatsapp?telefono:null,
+      telefono_whatsapp:avisarWhatsapp?JSON.stringify(destinatarios):null,
       anticipacion_horas:horasCalculadas,
       notificado:false
     };
@@ -1113,7 +1141,6 @@ function bindForm(){
       const consulta=STATE.editId?sb.from("reminders").update(payload).eq("id",STATE.editId):sb.from("reminders").insert(payload);
       const {error}=await consulta;
       if(error) throw error;
-      if(avisarWhatsapp&&telefono) await sb.from("profiles").upsert({id:STATE.user.id,telefono_whatsapp:telefono});
       navigate("dashboard");
     }catch(err){
       mostrarError(err?.message||"No se pudo guardar el recordatorio.");
@@ -1135,6 +1162,15 @@ async function bindPerfilLoad(){
   const { data: perfil, error: perfilError } = await sb.from("profiles").select("nombre, telefono_whatsapp, callmebot_apikey").eq("id", STATE.user.id).maybeSingle();
   if(perfilError) console.error("Error cargando perfil:", perfilError);
   STATE.perfil = perfil || {};
+  let contactos = contactosWhatsApp(STATE.perfil);
+  const nuevoContacto = () => ({id:(crypto.randomUUID?.() || `contacto-${Date.now()}-${Math.random().toString(16).slice(2)}`),nombre:"",telefono:"",apikey:"",activo:true});
+  const filaContacto = c => `
+    <div class="contacto-row rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3" data-id="${esc(c.id)}">
+      <div class="flex items-center justify-between gap-3"><p class="font-display text-sm font-semibold text-sand">Destinatario</p><label class="flex items-center gap-2 text-sm text-sand/60"><input type="checkbox" class="p-contacto-activo accent-mint-500" ${c.activo?'checked':''}/> Activo</label></div>
+      <div class="form-grid-2"><div><label class="label-field text-xs">Nombre</label><input class="input-field p-contacto-nombre" placeholder="Ej: Mamá" value="${esc(c.nombre)}" /></div><div><label class="label-field text-xs">Número de WhatsApp</label><input class="input-field p-contacto-telefono" placeholder="Ej: +56 9 1234 5678" value="${esc(c.telefono)}" /></div></div>
+      <div><label class="label-field text-xs">API Key de CallMeBot</label><input class="input-field p-contacto-apikey" placeholder="Ej: 123456" value="${esc(c.apikey)}" /><p class="mt-1 text-xs text-sand/40">Cada número debe activar CallMeBot y tener su propia API key.</p></div>
+      <button type="button" class="btn-ghost btn-eliminar-contacto !px-0 !py-1 text-coral-400">Eliminar número</button>
+    </div>`;
   const app = document.getElementById("app");
   app.innerHTML = `
   <main class="min-h-screen pb-24 sm:pb-10">
@@ -1148,16 +1184,10 @@ async function bindPerfilLoad(){
       <div class="card p-6 sm:p-8">
         <p class="text-xs text-sand/40">Correo de la cuenta</p>
         <p class="mt-1 font-display text-lg text-sand">${esc(STATE.user.email)}</p>
-        <form id="perfil-form" class="mt-6 space-y-4">
+        <form id="perfil-form" class="mt-6 space-y-5">
           <div><label class="label-field">Nombre</label><input id="p-nombre" class="input-field" value="${esc(perfil?.nombre)}" /></div>
+          <div class="space-y-3"><div><p class="font-display font-semibold text-sand">Números de WhatsApp</p><p class="mt-1 text-xs text-sand/50">Los números desactivados no aparecerán al crear recordatorios ni recibirán avisos.</p></div><div id="lista-contactos" class="space-y-3">${contactos.map(filaContacto).join("")}</div><button type="button" id="btn-agregar-contacto" class="btn-secondary w-full">＋ Agregar número</button></div>
           <div>
-            <label class="label-field">Número de WhatsApp por defecto</label>
-            <input id="p-telefono" class="input-field" placeholder="Ej: +56 9 1234 5678" value="${esc(perfil?.telefono_whatsapp)}" />
-            <p class="mt-1 text-xs text-sand/40">Se usará como valor por defecto al crear nuevos recordatorios.</p>
-          </div>
-<div>
-            <label class="label-field">API Key de CallMeBot</label>
-            <input id="p-callmebot" class="input-field" placeholder="Ej: 123456" value="${esc(perfil?.callmebot_apikey)}" />
             <div class="mt-3 rounded-xl border border-mint-500/30 bg-mint-500/5 p-4 text-xs text-sand/70 space-y-2">
               <p class="font-semibold text-sand">📲 Cómo activar tu WhatsApp (una sola vez):</p>
               <ol class="list-decimal list-inside space-y-1">
@@ -1182,15 +1212,38 @@ async function bindPerfilLoad(){
     ${bottomNav("perfil")}
   </main>`;
 
+  const lista = document.getElementById("lista-contactos");
+  function enlazarFila(fila){
+    fila.querySelector(".btn-eliminar-contacto").onclick=()=>fila.remove();
+  }
+  lista.querySelectorAll(".contacto-row").forEach(enlazarFila);
+  document.getElementById("btn-agregar-contacto").onclick=()=>{
+    const contenedor=document.createElement("div");
+    contenedor.innerHTML=filaContacto(nuevoContacto());
+    const fila=contenedor.firstElementChild;
+    lista.appendChild(fila); enlazarFila(fila); fila.querySelector(".p-contacto-nombre").focus();
+  };
+
   document.getElementById("perfil-form").onsubmit = async (e)=>{
     e.preventDefault();
     const btn = document.getElementById("perfil-submit");
     btn.disabled = true; btn.textContent = "Guardando...";
+    const contactosGuardados=[...lista.querySelectorAll(".contacto-row")].map(fila=>({
+      id:fila.dataset.id,
+      nombre:normalizarTextoPresentacion(fila.querySelector(".p-contacto-nombre").value),
+      telefono:fila.querySelector(".p-contacto-telefono").value.trim(),
+      apikey:fila.querySelector(".p-contacto-apikey").value.trim(),
+      activo:fila.querySelector(".p-contacto-activo").checked
+    })).filter(c=>c.nombre||c.telefono||c.apikey);
+    const invalido=contactosGuardados.some(c=>!c.nombre||!c.telefono||(c.activo&&!c.apikey));
+    if(invalido){
+      const aviso=document.getElementById("perfil-aviso"); aviso.className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300"; aviso.textContent="⚠️ Completa nombre, número y API key para cada número activo."; aviso.classList.remove("hidden"); btn.disabled=false; btn.textContent="Guardar cambios"; return;
+    }
 const { error: guardarError } = await sb.from("profiles").upsert({
       id: STATE.user.id,
       nombre: normalizarTextoPresentacion(document.getElementById("p-nombre").value),
-      telefono_whatsapp: document.getElementById("p-telefono").value,
-      callmebot_apikey: document.getElementById("p-callmebot").value
+      telefono_whatsapp: JSON.stringify(contactosGuardados),
+      callmebot_apikey: contactosGuardados[0]?.apikey || ""
     });
     const aviso = document.getElementById("perfil-aviso");
     aviso.classList.remove("hidden");
@@ -1201,8 +1254,8 @@ const { error: guardarError } = await sb.from("profiles").upsert({
     } else {
       STATE.perfil = {
         nombre: normalizarTextoPresentacion(document.getElementById("p-nombre").value),
-        telefono_whatsapp: document.getElementById("p-telefono").value,
-        callmebot_apikey: document.getElementById("p-callmebot").value
+        telefono_whatsapp: JSON.stringify(contactosGuardados),
+        callmebot_apikey: contactosGuardados[0]?.apikey || ""
       };
       aviso.className = "rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400";
       aviso.textContent = "Datos guardados ✅";

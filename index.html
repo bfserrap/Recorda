@@ -315,9 +315,9 @@ function contactosWhatsApp(perfil = STATE.perfil){
   try {
     const contactos = JSON.parse(bruto || "[]");
     if(Array.isArray(contactos)) return contactos.filter(c=>c && c.id && c.telefono)
-      .map(c=>({id:String(c.id),nombre:c.nombre||"WhatsApp",telefono:c.telefono,apikey:c.apikey||"",activo:c.activo!==false}));
+      .map(c=>({id:String(c.id),nombre:c.nombre||"WhatsApp",telefono:c.telefono,activo:c.activo!==false}));
   } catch(_) {}
-  return bruto ? [{id:"principal",nombre:"Mi WhatsApp",telefono:bruto,apikey:perfil?.callmebot_apikey||"",activo:true}] : [];
+  return bruto ? [{id:"principal",nombre:"Mi WhatsApp",telefono:bruto,activo:true}] : [];
 }
 function destinatariosRecordatorio(recordatorio, contactos = contactosWhatsApp()){
   const bruto = recordatorio?.telefono_whatsapp || "";
@@ -645,7 +645,7 @@ function viewDashboardLoading(){
 async function asegurarPerfilCargado(){
   if(STATE.perfil || !STATE.user) return;
   const { data, error } = await sb.from("profiles")
-    .select("nombre, telefono_whatsapp, callmebot_apikey")
+    .select("nombre, telefono_whatsapp")
     .eq("id", STATE.user.id)
     .maybeSingle();
   if(error){ console.error("Error cargando perfil:", error); return; }
@@ -1159,16 +1159,15 @@ function viewPerfilLoading(){
   return `<main class="min-h-screen pb-24 sm:pb-10">${navbar(false)}<div class="py-24 text-center text-sand/40">Cargando…</div></main>`;
 }
 async function bindPerfilLoad(){
-  const { data: perfil, error: perfilError } = await sb.from("profiles").select("nombre, telefono_whatsapp, callmebot_apikey").eq("id", STATE.user.id).maybeSingle();
+  const { data: perfil, error: perfilError } = await sb.from("profiles").select("nombre, telefono_whatsapp").eq("id", STATE.user.id).maybeSingle();
   if(perfilError) console.error("Error cargando perfil:", perfilError);
   STATE.perfil = perfil || {};
   let contactos = contactosWhatsApp(STATE.perfil);
-  const nuevoContacto = () => ({id:(crypto.randomUUID?.() || `contacto-${Date.now()}-${Math.random().toString(16).slice(2)}`),nombre:"",telefono:"",apikey:"",activo:true});
+  const nuevoContacto = () => ({id:(crypto.randomUUID?.() || `contacto-${Date.now()}-${Math.random().toString(16).slice(2)}`),nombre:"",telefono:"",activo:true});
   const filaContacto = c => `
     <div class="contacto-row rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3" data-id="${esc(c.id)}">
       <div class="flex items-center justify-between gap-3"><p class="font-display text-sm font-semibold text-sand">Destinatario</p><label class="flex items-center gap-2 text-sm text-sand/60"><input type="checkbox" class="p-contacto-activo accent-mint-500" ${c.activo?'checked':''}/> Activo</label></div>
       <div class="form-grid-2"><div><label class="label-field text-xs">Nombre</label><input class="input-field p-contacto-nombre" placeholder="Ej: Mamá" value="${esc(c.nombre)}" /></div><div><label class="label-field text-xs">Número de WhatsApp</label><input class="input-field p-contacto-telefono" placeholder="Ej: +56 9 1234 5678" value="${esc(c.telefono)}" /></div></div>
-      <div><label class="label-field text-xs">API Key de CallMeBot</label><input class="input-field p-contacto-apikey" placeholder="Ej: 123456" value="${esc(c.apikey)}" /><p class="mt-1 text-xs text-sand/40">Cada número debe activar CallMeBot y tener su propia API key.</p></div>
       <button type="button" class="btn-ghost btn-eliminar-contacto !px-0 !py-1 text-coral-400">Eliminar número</button>
     </div>`;
   const app = document.getElementById("app");
@@ -1187,22 +1186,6 @@ async function bindPerfilLoad(){
         <form id="perfil-form" class="mt-6 space-y-5">
           <div><label class="label-field">Nombre</label><input id="p-nombre" class="input-field" value="${esc(perfil?.nombre)}" /></div>
           <div class="space-y-3"><div><p class="font-display font-semibold text-sand">Números de WhatsApp</p><p class="mt-1 text-xs text-sand/50">Los números desactivados no aparecerán al crear recordatorios ni recibirán avisos.</p></div><div id="lista-contactos" class="space-y-3">${contactos.map(filaContacto).join("")}</div><button type="button" id="btn-agregar-contacto" class="btn-secondary w-full">＋ Agregar número</button></div>
-          <div>
-            <div class="mt-3 rounded-xl border border-mint-500/30 bg-mint-500/5 p-4 text-xs text-sand/70 space-y-2">
-              <p class="font-semibold text-sand">📲 Cómo activar tu WhatsApp (una sola vez):</p>
-              <ol class="list-decimal list-inside space-y-1">
-                <li>Toca el botón de abajo — abre WhatsApp con el mensaje ya escrito</li>
-                <li>Solo aprieta "Enviar" en WhatsApp</li>
-                <li>El bot te responde con un mensaje largo — busca la línea que dice <b>"Your apikey is:"</b> y copia SOLO el número que viene justo después (ignora todo el resto del mensaje)</li>
-                <li>Pega ese número arriba, en el campo "API Key de CallMeBot", y guarda cambios</li>
-              </ol>
-              <div class="mt-2 rounded-lg bg-white border border-mint-500/20 p-3">
-                <p class="text-[11px] text-sand/50 mb-1">Ejemplo de lo que responde el bot:</p>
-                <p class="text-xs font-mono text-sand/70">CallMeBot API Activated for 569XXXXXXXX<br/>Your apikey is: <span class="bg-mint-500/20 text-mint-600 font-bold px-1 rounded">9994056</span> ← <b>esto es lo único que copias</b></p>
-              </div>
-              <a href="https://wa.me/34611011637?text=I%20allow%20callmebot%20to%20send%20me%20messages" target="_blank" rel="noopener noreferrer" class="btn-primary !mt-2 w-full !py-2 text-sm">📲 Abrir WhatsApp y activar</a>
-            </div>
-          </div>
           <div id="perfil-aviso" class="hidden rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400"></div>
           <button type="submit" id="perfil-submit" class="btn-primary w-full">Guardar cambios</button>
         </form>
@@ -1232,18 +1215,16 @@ async function bindPerfilLoad(){
       id:fila.dataset.id,
       nombre:normalizarTextoPresentacion(fila.querySelector(".p-contacto-nombre").value),
       telefono:fila.querySelector(".p-contacto-telefono").value.trim(),
-      apikey:fila.querySelector(".p-contacto-apikey").value.trim(),
       activo:fila.querySelector(".p-contacto-activo").checked
-    })).filter(c=>c.nombre||c.telefono||c.apikey);
-    const invalido=contactosGuardados.some(c=>!c.nombre||!c.telefono||(c.activo&&!c.apikey));
+    })).filter(c=>c.nombre||c.telefono);
+    const invalido=contactosGuardados.some(c=>!c.nombre||!c.telefono);
     if(invalido){
-      const aviso=document.getElementById("perfil-aviso"); aviso.className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300"; aviso.textContent="⚠️ Completa nombre, número y API key para cada número activo."; aviso.classList.remove("hidden"); btn.disabled=false; btn.textContent="Guardar cambios"; return;
+      const aviso=document.getElementById("perfil-aviso"); aviso.className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300"; aviso.textContent="⚠️ Completa nombre y número para cada contacto."; aviso.classList.remove("hidden"); btn.disabled=false; btn.textContent="Guardar cambios"; return;
     }
 const { error: guardarError } = await sb.from("profiles").upsert({
       id: STATE.user.id,
       nombre: normalizarTextoPresentacion(document.getElementById("p-nombre").value),
-      telefono_whatsapp: JSON.stringify(contactosGuardados),
-      callmebot_apikey: contactosGuardados[0]?.apikey || ""
+      telefono_whatsapp: JSON.stringify(contactosGuardados)
     });
     const aviso = document.getElementById("perfil-aviso");
     aviso.classList.remove("hidden");
@@ -1254,8 +1235,7 @@ const { error: guardarError } = await sb.from("profiles").upsert({
     } else {
       STATE.perfil = {
         nombre: normalizarTextoPresentacion(document.getElementById("p-nombre").value),
-        telefono_whatsapp: JSON.stringify(contactosGuardados),
-        callmebot_apikey: contactosGuardados[0]?.apikey || ""
+        telefono_whatsapp: JSON.stringify(contactosGuardados)
       };
       aviso.className = "rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400";
       aviso.textContent = "Datos guardados ✅";

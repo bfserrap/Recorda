@@ -14,9 +14,14 @@ export default async function handler(req, res) {
 
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const GREEN_API_ID_INSTANCE = process.env.GREEN_API_ID_INSTANCE;
+  const GREEN_API_TOKEN_INSTANCE = process.env.GREEN_API_TOKEN_INSTANCE;
 
   if (!SUPABASE_URL || !SERVICE_KEY) {
     return res.status(500).json({ error: "Faltan variables de entorno SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY" });
+  }
+  if (!GREEN_API_ID_INSTANCE || !GREEN_API_TOKEN_INSTANCE) {
+    return res.status(500).json({ error: "Faltan variables de entorno GREEN_API_ID_INSTANCE o GREEN_API_TOKEN_INSTANCE" });
   }
 
   const headers = {
@@ -45,9 +50,9 @@ export default async function handler(req, res) {
     try {
       const contactos = JSON.parse(bruto || "[]");
       if (Array.isArray(contactos)) return contactos.filter((c) => c?.id && c?.telefono)
-        .map((c) => ({ id: String(c.id), telefono: c.telefono, apikey: c.apikey || "", activo: c.activo !== false }));
+        .map((c) => ({ id: String(c.id), telefono: c.telefono, activo: c.activo !== false }));
     } catch (_) {}
-    return bruto ? [{ id: "principal", telefono: bruto, apikey: perfil?.callmebot_apikey || "", activo: true }] : [];
+    return bruto ? [{ id: "principal", telefono: bruto, activo: true }] : [];
   }
 
   function destinatariosDelRecordatorio(recordatorio, perfil) {
@@ -150,7 +155,7 @@ export default async function handler(req, res) {
         }
 
         const resPerfil = await fetch(
-          `${SUPABASE_URL}/rest/v1/profiles?id=eq.${r.user_id}&select=telefono_whatsapp,callmebot_apikey`,
+          `${SUPABASE_URL}/rest/v1/profiles?id=eq.${r.user_id}&select=telefono_whatsapp`,
           { headers }
         );
         if (!resPerfil.ok) throw new Error("No se pudo consultar el perfil");
@@ -215,18 +220,23 @@ export default async function handler(req, res) {
         }
 
         const mensaje = lineas.join("\n");
+        const urlGreenApi = `https://api.greenapi.com/waInstance${GREEN_API_ID_INSTANCE}/sendMessage/${GREEN_API_TOKEN_INSTANCE}`;
         const resultados = await Promise.all(destinatarios.map(async (destinatario) => {
-          if (!destinatario.apikey) return { ok: false, detalle: `Falta API key para ${destinatario.telefono}` };
-          const urlEnvio = `https://api.callmebot.com/whatsapp.php?phone=${normalizarTelefono(destinatario.telefono)}&text=${encodeURIComponent(mensaje)}&apikey=${destinatario.apikey}`;
-          const respuesta = await fetch(urlEnvio);
+          const telefono = normalizarTelefono(destinatario.telefono);
+          if (!telefono) return { ok: false, detalle: `Teléfono inválido para ${destinatario.nombre || destinatario.telefono}` };
+          const respuesta = await fetch(urlGreenApi, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ chatId: `${telefono}@c.us`, message: mensaje }),
+          });
           const detalle = await respuesta.text();
-          return { ok: respuesta.ok && !/error/i.test(detalle), detalle };
+          return { ok: respuesta.ok, detalle };
         }));
         const fallidos = resultados.filter((resultado) => !resultado.ok);
         if (fallidos.length) {
           errores.push({
             id: r.id,
-            motivo: "CallMeBot respondió con error para uno o más destinatarios; se reintentará",
+            motivo: "Green-API respondió con error para uno o más destinatarios; se reintentará",
             detalle: fallidos.map((resultado) => resultado.detalle).join(" | ").slice(0, 200),
           });
           continue;

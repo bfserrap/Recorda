@@ -40,6 +40,26 @@ export default async function handler(req, res) {
     }).join("\n");
   }
 
+  function contactosWhatsApp(perfil) {
+    const bruto = perfil?.telefono_whatsapp;
+    try {
+      const contactos = JSON.parse(bruto || "[]");
+      if (Array.isArray(contactos)) return contactos.filter((c) => c?.id && c?.telefono)
+        .map((c) => ({ id: String(c.id), telefono: c.telefono, apikey: c.apikey || "", activo: c.activo !== false }));
+    } catch (_) {}
+    return bruto ? [{ id: "principal", telefono: bruto, apikey: perfil?.callmebot_apikey || "", activo: true }] : [];
+  }
+
+  function destinatariosDelRecordatorio(recordatorio, perfil) {
+    const contactos = contactosWhatsApp(perfil);
+    try {
+      const ids = JSON.parse(recordatorio.telefono_whatsapp || "[]");
+      if (Array.isArray(ids)) return contactos.filter((c) => c.activo && ids.includes(c.id));
+    } catch (_) {}
+    const telefono = normalizarTelefono(recordatorio.telefono_whatsapp || perfil.telefono_whatsapp);
+    return contactos.filter((c) => c.activo && normalizarTelefono(c.telefono) === telefono);
+  }
+
   // Convierte una fecha/hora ingresada en Chile a un instante UTC real.
   // Intl incorpora automáticamente los cambios de horario de verano/invierno.
   function fechaLocalAUTC(fecha, hora, timeZone = APP_TIME_ZONE) {
@@ -129,9 +149,6 @@ export default async function handler(req, res) {
           continue;
         }
 
-        let telefono = r.telefono_whatsapp;
-        let apikey = null;
-
         const resPerfil = await fetch(
           `${SUPABASE_URL}/rest/v1/profiles?id=eq.${r.user_id}&select=telefono_whatsapp,callmebot_apikey`,
           { headers }
@@ -140,15 +157,11 @@ export default async function handler(req, res) {
 
         const perfilArr = await resPerfil.json();
         const perfil = perfilArr[0] || {};
-        telefono = telefono || perfil.telefono_whatsapp;
-        apikey = perfil.callmebot_apikey;
-
-        if (!telefono || !apikey) {
-          errores.push({ id: r.id, motivo: "Faltan teléfono o API key; se reintentará" });
+        const destinatarios = destinatariosDelRecordatorio(r, perfil);
+        if (!destinatarios.length) {
+          errores.push({ id: r.id, motivo: "No hay destinatarios activos para este recordatorio; se reintentará" });
           continue;
         }
-
-        const telefonoLimpio = normalizarTelefono(telefono);
         const fechaTexto = fechaHora.toLocaleDateString("es-CL", {
           timeZone: APP_TIME_ZONE,
           weekday: "long",
@@ -202,15 +215,19 @@ export default async function handler(req, res) {
         }
 
         const mensaje = lineas.join("\n");
-        const urlEnvio = `https://api.callmebot.com/whatsapp.php?phone=${telefonoLimpio}&text=${encodeURIComponent(mensaje)}&apikey=${apikey}`;
-        const resEnvio = await fetch(urlEnvio);
-        const textoRespuesta = await resEnvio.text();
-
-        if (!resEnvio.ok || /error/i.test(textoRespuesta)) {
+        const resultados = await Promise.all(destinatarios.map(async (destinatario) => {
+          if (!destinatario.apikey) return { ok: false, detalle: `Falta API key para ${destinatario.telefono}` };
+          const urlEnvio = `https://api.callmebot.com/whatsapp.php?phone=${normalizarTelefono(destinatario.telefono)}&text=${encodeURIComponent(mensaje)}&apikey=${destinatario.apikey}`;
+          const respuesta = await fetch(urlEnvio);
+          const detalle = await respuesta.text();
+          return { ok: respuesta.ok && !/error/i.test(detalle), detalle };
+        }));
+        const fallidos = resultados.filter((resultado) => !resultado.ok);
+        if (fallidos.length) {
           errores.push({
             id: r.id,
-            motivo: "CallMeBot respondió con error; se reintentará",
-            detalle: textoRespuesta.slice(0, 200),
+            motivo: "CallMeBot respondió con error para uno o más destinatarios; se reintentará",
+            detalle: fallidos.map((resultado) => resultado.detalle).join(" | ").slice(0, 200),
           });
           continue;
         }

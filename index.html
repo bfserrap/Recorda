@@ -108,25 +108,6 @@ window.sb = sb;
 /* ============================================================
    2) DATOS: Centros médicos y especialidades en Chile
    ============================================================ */
-const CENTROS_MEDICOS_CHILE = [
-  { region:"Arica y Parinacota", centros:[{nombre:"Hospital Dr. Juan Noé Crevani",comuna:"Arica"},{nombre:"Clínica Nuestra Señora de Guadalupe",comuna:"Arica"}]},
-  { region:"Tarapacá", centros:[{nombre:"Hospital Regional Dr. Ernesto Torres Galdames",comuna:"Iquique"},{nombre:"Clínica Iquique (RedSalud)",comuna:"Iquique"}]},
-  { region:"Antofagasta", centros:[{nombre:"Hospital Regional Dr. Leonardo Guzmán",comuna:"Antofagasta"},{nombre:"Clínica Antofagasta",comuna:"Antofagasta"},{nombre:"Megasalud Antofagasta",comuna:"Antofagasta"}]},
-  { region:"Atacama", centros:[{nombre:"Hospital Regional San José del Carmen",comuna:"Copiapó"}]},
-  { region:"Coquimbo", centros:[{nombre:"Hospital San Juan de Dios de La Serena",comuna:"La Serena"},{nombre:"Clínica Elqui",comuna:"La Serena"},{nombre:"Clínica Coquimbo",comuna:"Coquimbo"}]},
-  { region:"Valparaíso", centros:[{nombre:"Hospital Carlos Van Buren",comuna:"Valparaíso"},{nombre:"Clínica Van Buren",comuna:"Valparaíso"},{nombre:"Clínica ReSalud Valparaíso",comuna:"Valparaíso"},{nombre:"Hospital Gustavo Fricke",comuna:"Viña del Mar"},{nombre:"Clínica Ciudad del Mar",comuna:"Viña del Mar"},{nombre:"Clínica Reñaca",comuna:"Viña del Mar"}]},
-  { region:"Metropolitana de Santiago", centros:[{nombre:"Clínica Las Condes",comuna:"Las Condes"},{nombre:"Clínica Alemana",comuna:"Vitacura"},{nombre:"Clínica Santa María",comuna:"Providencia"},{nombre:"Clínica Indisa",comuna:"Providencia"},{nombre:"Clínica UC Christus",comuna:"Santiago"},{nombre:"Clínica Dávila",comuna:"Recoleta"},{nombre:"RedSalud Providencia",comuna:"Providencia"},{nombre:"Megasalud Santiago Centro",comuna:"Santiago"},{nombre:"Hospital Clínico Universidad de Chile",comuna:"Independencia"},{nombre:"Hospital San Juan de Dios",comuna:"Santiago"},{nombre:"Hospital Barros Luco Trudeau",comuna:"San Miguel"},{nombre:"Hospital Sótero del Río",comuna:"Puente Alto"},{nombre:"Hospital San José",comuna:"Independencia"},{nombre:"Clínica Bupa Santiago (ex Cruz Blanca)",comuna:"Santiago"},{nombre:"Clínica Vespucio",comuna:"La Florida"},{nombre:"Integramédica Providencia",comuna:"Providencia"}]},
-  { region:"Libertador General Bernardo O'Higgins", centros:[{nombre:"Hospital Regional Rancagua",comuna:"Rancagua"},{nombre:"Clínica Los Andes",comuna:"Rancagua"},{nombre:"RedSalud Rancagua",comuna:"Rancagua"}]},
-  { region:"Maule", centros:[{nombre:"Hospital Regional de Talca",comuna:"Talca"},{nombre:"Clínica Ancora",comuna:"Talca"},{nombre:"Clínica Andes Salud Talca",comuna:"Talca"}]},
-  { region:"Ñuble", centros:[{nombre:"Hospital Clínico Herminda Martín",comuna:"Chillán"},{nombre:"Clínica Bío Bío Chillán",comuna:"Chillán"}]},
-  { region:"Biobío", centros:[{nombre:"Hospital Regional Guillermo Grant Benavente",comuna:"Concepción"},{nombre:"Clínica Sanatorio Alemán",comuna:"Concepción"},{nombre:"Clínica Bío Bío",comuna:"Concepción"},{nombre:"RedSalud Concepción",comuna:"Concepción"}]},
-  { region:"La Araucanía", centros:[{nombre:"Hospital Hernán Henríquez Aravena",comuna:"Temuco"},{nombre:"Clínica Alemana de Temuco",comuna:"Temuco"},{nombre:"Clínica Mayor Temuco",comuna:"Temuco"}]},
-  { region:"Los Ríos", centros:[{nombre:"Hospital Base Valdivia",comuna:"Valdivia"},{nombre:"Clínica Alemana Valdivia",comuna:"Valdivia"}]},
-  { region:"Los Lagos", centros:[{nombre:"Hospital Base Osorno",comuna:"Osorno"},{nombre:"Hospital Puerto Montt Dr. Eduardo Schütz",comuna:"Puerto Montt"},{nombre:"Clínica Alemana Puerto Montt",comuna:"Puerto Montt"},{nombre:"Clínica Puerto Varas",comuna:"Puerto Varas"}]},
-  { region:"Aysén", centros:[{nombre:"Hospital Regional Coyhaique",comuna:"Coyhaique"}]},
-  { region:"Magallanes y de la Antártica Chilena", centros:[{nombre:"Hospital Clínico Magallanes",comuna:"Punta Arenas"},{nombre:"Clínica Magallanes",comuna:"Punta Arenas"}]}
-];
-
 const ESPECIALIDADES_MEDICAS = [
   "Medicina general","Medicina interna","Pediatría","Ginecología y obstetricia",
   "Traumatología y ortopedia","Cardiología","Cirugía general","Dermatología",
@@ -154,13 +135,6 @@ const FORM_CONFIG = {
   compra:{titulo:"",placeholder:"",ubicacion:"",ubicacionPlaceholder:"",notasPlaceholder:"",sugerencias:[]}
 };
 
-const ANTICIPACION_OPCIONES = [
-  {valor:6,label:"6 horas antes"},
-  {valor:24,label:"1 día antes"},
-  {valor:72,label:"3 días antes"},
-  {valor:168,label:"1 semana antes"}
-];
-
 /* ============================================================
    3) ESTADO GLOBAL Y RUTEO
    ============================================================ */
@@ -170,7 +144,6 @@ let STATE = {
   reminders: [],
   filtro: "todos",
   formTempTipo: "cita_medica",
-  formManualCentro: false,
   editId: null,
   formDraft: {
     titulo: "",
@@ -454,10 +427,10 @@ function bottomNav(active){
    ============================================================ */
 function viewLanding(){
   const FEATURES = [
-    ["🩺","Citas médicas ordenadas","Elige el centro médico o clínica desde el listado por región. Guarda especialidad, médico y detalles."],
-    ["📲","Aviso directo por Green.API","Los mensajes llegan por WhatsApp con todo el detalle de fecha, hora y lugar de forma automatizada."],
-    ["⏰","Tú eliges la anticipación","6 horas, 1 día, 3 días, 1 semana o múltiples fechas y horas personalizadas simultáneamente."],
-    ["🎉","No solo horas médicas","Cumpleaños, trámites, reuniones, pagos y controles todo en un solo lugar."]
+    ["🩺","Citas médicas ordenadas","Guarda especialidad, médico, centro médico y dirección."],
+    ["📲","Aviso directo por Green.API","Los mensajes llegan por WhatsApp con todo el detalle de forma automatizada."],
+    ["⏰","Tú eliges la anticipación","6 horas, 1 día, 3 días, 1 semana o múltiples fechas y horas personalizadas."],
+    ["🎉","No solo horas médicas","Cumpleaños, trámites, reuniones, compras y controles en un solo lugar."]
   ];
   return `
   <main class="relative">
@@ -611,7 +584,7 @@ async function loadReminders(){
   STATE.reminders = (data || []).map(r => r.tipo === "otro" && r.titulo === "🛒 Lista de compras" ? {...r, tipo:"compra"} : r);
 }
 function viewDashboard(){
-  const nombre = STATE.user?.user_metadata?.nombre || "";
+  const nombre = STATE.user?.user_metadata?.nombre || STATE.perfil?.nombre || "";
   const ahora = Date.now();
   const proximos = STATE.reminders.filter(r => new Date(`${r.fecha}T${r.hora}`).getTime() >= ahora);
   const filtrados = STATE.filtro==="todos" ? proximos : proximos.filter(r=>r.tipo===STATE.filtro);
@@ -821,7 +794,7 @@ function viewForm(){
 
         <section id="bloque-anticipacion" class="card space-y-5 p-5 sm:p-6">
           <div><p class="font-display font-semibold text-sand">⏰ Anticipación y Recordatorios</p></div>
-          <p class="text-xs text-sand/50">Puedes seleccionar múltiples opciones predefinidas y/o agregar recordatorios personalizados con fecha y hora específica simultáneamente.</p>
+          <p class="text-xs text-sand/50">Selecciona opciones predefinidas y/o agrega recordatorios personalizados con fecha y hora específica simultáneamente.</p>
           
           <div class="grid grid-cols-2 gap-2 sm:grid-cols-4" id="anticipacion-presets">
             ${[
@@ -837,7 +810,7 @@ function viewForm(){
 
           <div class="mt-4 space-y-3">
             <div class="flex items-center justify-between">
-              <label class="label-field mb-0">Recordatorios personalizados (Fecha y hora específica)</label>
+              <label class="label-field mb-0">Recordatorios personalizados (Fecha y hora)</label>
               <button type="button" id="btn-agregar-anticipacion-custom" class="btn-secondary !px-3 !py-1.5 text-xs">＋ Agregar personalizado</button>
             </div>
             <div id="lista-anticipacion-custom" class="space-y-3">
@@ -849,18 +822,18 @@ function viewForm(){
                   </div>
                   <div class="form-grid-2">
                     <div>
-                      <label class="label-field text-xs">Fecha que debe sonar</label>
+                      <label class="label-field text-xs">Fecha</label>
                       <input type="date" class="input-field f-custom-fecha" value="${esc(custom.fecha)}" />
                     </div>
                     <div>
-                      <label class="label-field text-xs">Hora que debe sonar</label>
+                      <label class="label-field text-xs">Hora</label>
                       <input type="time" class="input-field f-custom-hora" value="${esc(custom.hora)}" />
                     </div>
                   </div>
                 </div>
               `).join("")}
               ${customAnticipaciones.length === 0 ? `
-                <p class="text-xs text-sand/40 italic">No hay recordatorios personalizados agregados. Haz clic en "Agregar personalizado" si deseas configurar avisos en fechas y horas exactas.</p>
+                <p class="text-xs text-sand/40 italic">No hay recordatorios personalizados agregados.</p>
               ` : ''}
             </div>
           </div>
@@ -986,7 +959,6 @@ function bindForm(){
     };
   });
 
-  // Anticipaciones binding
   function sincronizarAnticipacionesForm(){
     const nuevas = [];
     document.querySelectorAll("#anticipacion-presets button").forEach(b => {
@@ -1015,7 +987,7 @@ function bindForm(){
     if(!container) return;
 
     if(customItems.length === 0){
-      container.innerHTML = `<p class="text-xs text-sand/40 italic">No hay recordatorios personalizados agregados. Haz clic en "Agregar personalizado" si deseas configurar avisos en fechas y horas exactas.</p>`;
+      container.innerHTML = `<p class="text-xs text-sand/40 italic">No hay recordatorios personalizados agregados.</p>`;
       return;
     }
 
@@ -1027,11 +999,11 @@ function bindForm(){
         </div>
         <div class="form-grid-2">
           <div>
-            <label class="label-field text-xs">Fecha que debe sonar</label>
+            <label class="label-field text-xs">Fecha</label>
             <input type="date" class="input-field f-custom-fecha" value="${esc(custom.fecha)}" />
           </div>
           <div>
-            <label class="label-field text-xs">Hora que debe sonar</label>
+            <label class="label-field text-xs">Hora</label>
             <input type="time" class="input-field f-custom-hora" value="${esc(custom.hora)}" />
           </div>
         </div>

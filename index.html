@@ -162,7 +162,7 @@ const ANTICIPACION_OPCIONES = [
 ];
 
 /* ============================================================
-   3) ESTADO GLOBAL Y RUTEO[cite: 4]
+   3) ESTADO GLOBAL Y RUTEO
    ============================================================ */
 let STATE = {
   user: null,
@@ -206,7 +206,7 @@ async function init(){
 }
 
 /* ============================================================
-   4) UTILIDADES Y GREEN.API WHATSAPP INTEGRATION[cite: 4]
+   4) UTILIDADES Y GREEN.API WHATSAPP INTEGRATION
    ============================================================ */
 function normalizarTelefono(telefono){
   let limpio = (telefono||"").replace(/[^\d+]/g,"");
@@ -344,7 +344,7 @@ function diasRestantes(fecha,hora){
 function esc(s){ return (s??"").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ============================================================
-   5) RENDER PRINCIPAL Y RUTAS[cite: 4]
+   5) RENDER PRINCIPAL Y RUTAS
    ============================================================ */
 async function render(){
   const hash = window.location.hash.replace("#","") || (STATE.user ? "dashboard" : "landing");
@@ -418,7 +418,7 @@ async function render(){
 }
 
 /* ============================================================
-   6) NAVBAR Y BOTTOM NAV[cite: 4]
+   6) NAVBAR Y BOTTOM NAV
    ============================================================ */
 function navbar(showAuth=true){
   return `
@@ -450,7 +450,7 @@ function bottomNav(active){
 }
 
 /* ============================================================
-   7) VISTA: LANDING[cite: 4]
+   7) VISTA: LANDING
    ============================================================ */
 function viewLanding(){
   const FEATURES = [
@@ -493,7 +493,7 @@ function viewLanding(){
 function bindLanding(){}
 
 /* ============================================================
-   8) VISTA: LOGIN / REGISTRO[cite: 4]
+   8) VISTA: LOGIN / REGISTRO
    ============================================================ */
 function viewLogin(){
   return `
@@ -579,7 +579,7 @@ function bindLogin(){
 }
 
 /* ============================================================
-   9) DASHBOARD[cite: 4]
+   9) DASHBOARD
    ============================================================ */
 function viewDashboardLoading(){
   return `<main class="min-h-screen pb-24 sm:pb-10">${navbar(false)}<div class="py-24 text-center text-sand/40">Cargando tus recordatorios…</div></main>`;
@@ -733,7 +733,7 @@ function bindDashboard(){
 }
 
 /* ============================================================
-   10) FORMULARIO: NUEVO / EDITAR[cite: 4]
+   10) FORMULARIO: NUEVO / EDITAR
    ============================================================ */
 function viewForm(){
   const esEdicion = !!STATE.editId;
@@ -1053,46 +1053,14 @@ function bindForm(){
       });
     });
   }
-```[cite: 5]
 
-    if(customItems.length === 0){
-      container.innerHTML = `<p class="text-xs text-sand/40 italic">No hay recordatorios personalizados agregados. Haz clic en "Agregar personalizado" si deseas configurar avisos en fechas y horas exactas.</p>`;
-      return;
-    }
-
-    container.innerHTML = customItems.map((custom, idx) => `
-      <div class="anticipacion-custom-row rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3" data-index="${idx}">
-        <div class="flex items-center justify-between">
-          <span class="font-display text-xs font-semibold text-sand">Personalizado #${idx+1}</span>
-          <button type="button" class="btn-ghost btn-eliminar-anticipacion-custom !px-0 !py-1 text-coral-400 text-xs">Eliminar</button>
-        </div>
-        <div class="form-grid-2">
-          <div>
-            <label class="label-field text-xs">Fecha que debe sonar</label>
-            <input type="date" class="input-field f-custom-fecha" value="${esc(custom.fecha)}" />
-          </div>
-          <div>
-            <label class="label-field text-xs">Hora que debe sonar</label>
-            <input type="time" class="input-field f-custom-hora" value="${esc(custom.hora)}" />
-          </div>
-        </div>
-      </div>
-    `).join("");
-
-    container.querySelectorAll(".anticipacion-custom-row").forEach(row => {
-      row.querySelector(".btn-eliminar-anticipacion-custom").onclick = () => {
-        const idx = Number(row.dataset.index);
-        let customs = STATE.formDraft.anticipaciones.filter(x => x.tipo === 'custom');
-        customs.splice(idx, 1);
-        const presets = STATE.formDraft.anticipaciones.filter(x => x.tipo === 'preset');
-        STATE.formDraft.anticipaciones = [...presets, ...customs];
-        renderAnticipacionCustomList();
-      };
-      row.querySelectorAll("input").forEach(inp => {
-        inp.oninput = sincronizarAnticipacionesForm;
-        inp.onchange = sincronizarAnticipacionesForm;
-      });
-    });
+  const btnAgregarCustom = $("btn-agregar-anticipacion-custom");
+  if(btnAgregarCustom){
+    btnAgregarCustom.onclick = () => {
+      sincronizarAnticipacionesForm();
+      STATE.formDraft.anticipaciones.push({ tipo: 'custom', fecha: "", hora: "" });
+      renderAnticipacionCustomList();
+    };
   }
 
   document.querySelectorAll(".anticipacion-custom-row").forEach(row => {
@@ -1106,15 +1074,6 @@ function bindForm(){
       inp.onchange = sincronizarAnticipacionesForm;
     });
   });
-
-  const btnAgregarCustom = $("btn-agregar-anticipacion-custom");
-  if(btnAgregarCustom){
-    btnAgregarCustom.onclick = () => {
-      sincronizarAnticipacionesForm();
-      STATE.formDraft.anticipaciones.push({ tipo: 'custom', fecha: "", hora: "" });
-      renderAnticipacionCustomList();
-    };
-  }
 
   if($("f-especialidad")) {
     $("f-especialidad").onchange = () => {
@@ -1227,7 +1186,7 @@ function bindForm(){
 }
 
 /* ============================================================
-   11) PERFIL Y GESTIÓN DE CONTACTOS WHATSAPP[cite: 4]
+   11) PERFIL Y GESTIÓN DE CONTACTOS WHATSAPP
    ============================================================ */
 function viewPerfil(){
   const perfil = STATE.perfil || {};

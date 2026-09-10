@@ -14,13 +14,12 @@
   tailwind.config = {
     theme: {
       extend: {
-                colors: {
+        colors: {
           ink: { 950:'#f8fafc',900:'#ffffff',800:'#f1f5f9',700:'#e2e8f0',600:'#cbd5e1' },
           mint: { 400:'#2563eb',500:'#3b82f6',600:'#1d4ed8' },
           coral: { 400:'#ef4444',500:'#dc2626' },
           sand: '#0f172a'
         },
-
         fontFamily: { display:['Space Grotesk','sans-serif'], body:['Inter','sans-serif'] },
         borderRadius: { xl2:'1.5rem', xl3:'2rem' },
         boxShadow: {
@@ -57,7 +56,7 @@
   .btn-ghost{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:999px;padding:.6rem 1.1rem;font-family:'Space Grotesk',sans-serif;font-size:.875rem;font-weight:600;color:#475569;transition:.15s}
   .btn-ghost:hover{color:#2563eb;background:rgba(37,99,235,0.05)}
   .card{background:#ffffff;border:1px solid rgba(0,0,0,0.06);border-radius:1.5rem;box-shadow:0 10px 30px -10px rgba(0,0,0,0.06)}
-.input-field{width:100%;min-width:0;border-radius:1rem;border:1px solid #cbd5e1;background:#ffffff;padding:.75rem 1rem;color:#0f172a;outline:none;transition:.15s;box-sizing:border-box}
+  .input-field{width:100%;min-width:0;border-radius:1rem;border:1px solid #cbd5e1;background:#ffffff;padding:.75rem 1rem;color:#0f172a;outline:none;transition:.15s;box-sizing:border-box}
   .input-field::placeholder{color:#94a3b8}
   .input-field:focus{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,0.15)}
   .label-field{display:block;margin-bottom:.375rem;font-size:.875rem;font-weight:600;color:#334155}
@@ -69,14 +68,10 @@
   .view{display:none}
   .view.active{display:block}
   @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
-
-  /* Evita que inputs de fecha/hora (u otros hijos de un grid) rompan el ancho en celulares */
   .grid > *{min-width:0}
   .form-grid-2{display:grid;grid-template-columns:1fr;gap:1rem}
   @media (min-width:640px){.form-grid-2{grid-template-columns:1fr 1fr}}
   .form-grid-2 > *{min-width:0}
-
-  /* Normaliza inputs de fecha y hora: mismo alto, mismo ancho, mismo look en iOS/Android/desktop */
   input[type="date"], input[type="time"]{
     min-width:0;width:100%;box-sizing:border-box;
     -webkit-appearance:none;appearance:none;
@@ -84,16 +79,8 @@
     font-family:'Inter',sans-serif;font-size:0.95rem;
     color:#0f172a;background:#ffffff;
   }
-  input[type="date"]::-webkit-date-and-time-value,
-  input[type="time"]::-webkit-date-and-time-value{
-    text-align:left;min-height:20px;
-  }
   input[type="date"]::-webkit-calendar-picker-indicator,
-  input[type="time"]::-webkit-calendar-picker-indicator{
-    opacity:0.6;padding:0;margin-left:4px;
-  }
-
-  /* Forzar la inversión de colores oscuros heredados por las clases del Tailwind antiguo */
+  input[type="time"]::-webkit-calendar-picker-indicator{opacity:0.6;padding:0;margin-left:4px;}
   .text-sand { color: #0f172a !important; }
   .text-sand\/60 { color: #475569 !important; }
   .text-sand\/50 { color: #64748b !important; }
@@ -102,7 +89,6 @@
   .bg-ink-900\/70, .bg-ink-900\/80, .bg-ink-900\/90 { background-color: rgba(255, 255, 255, 0.85) !important; border-bottom: 1px solid #e2e8f0; }
   .border-white\/5 { border-color: #e2e8f0 !important; }
 </style>
-
 </head>
 <body class="min-h-screen">
 
@@ -110,92 +96,39 @@
 
 <script>
 /* ============================================================
-   1) CONFIGURACIÓN — edita estas 2 líneas con tus datos reales
-   Los sacas en supabase.com -> tu proyecto -> Settings -> API
+   1) CONFIGURACIÓN (Supabase y Green.API)
    ============================================================ */
 const SUPABASE_URL = "https://soizfreqyjwishczfrmc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_JLIsPY_j1xWfLgYtIKFZrw_CO15cFw8";
 
+// CONFIGURACIÓN DE GREEN.API CONSOLE
+const GREEN_API_ID_INSTANCE = "710722721815";     // Reemplaza con tu idInstance
+const GREEN_API_TOKEN_INSTANCE = "99c62a3228b744a18ab233b8dc39f83ba164b95a015f4075b8"; // Reemplaza con tu apiTokenInstance
+const GREEN_API_URL = "https://7107.api.greenapi.com";
+
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-window.sb = sb; // para poder probar desde la consola del navegador: sb.auth.getSession()
+window.sb = sb;
 
 /* ============================================================
-   2) DATOS: centros médicos de Chile por región (editable)
+   2) DATOS: Centros médicos y especialidades en Chile
    ============================================================ */
 const CENTROS_MEDICOS_CHILE = [
-  { region:"Arica y Parinacota", centros:[
-    {nombre:"Hospital Dr. Juan Noé Crevani",comuna:"Arica"},
-    {nombre:"Clínica Nuestra Señora de Guadalupe",comuna:"Arica"}]},
-  { region:"Tarapacá", centros:[
-    {nombre:"Hospital Regional Dr. Ernesto Torres Galdames",comuna:"Iquique"},
-    {nombre:"Clínica Iquique (RedSalud)",comuna:"Iquique"}]},
-  { region:"Antofagasta", centros:[
-    {nombre:"Hospital Regional Dr. Leonardo Guzmán",comuna:"Antofagasta"},
-    {nombre:"Clínica Antofagasta",comuna:"Antofagasta"},
-    {nombre:"Megasalud Antofagasta",comuna:"Antofagasta"}]},
-  { region:"Atacama", centros:[
-    {nombre:"Hospital Regional San José del Carmen",comuna:"Copiapó"}]},
-  { region:"Coquimbo", centros:[
-    {nombre:"Hospital San Juan de Dios de La Serena",comuna:"La Serena"},
-    {nombre:"Clínica Elqui",comuna:"La Serena"},
-    {nombre:"Clínica Coquimbo",comuna:"Coquimbo"}]},
-  { region:"Valparaíso", centros:[
-    {nombre:"Hospital Carlos Van Buren",comuna:"Valparaíso"},
-    {nombre:"Clínica Van Buren",comuna:"Valparaíso"},
-    {nombre:"Clínica ReSalud Valparaíso",comuna:"Valparaíso"},
-    {nombre:"Hospital Gustavo Fricke",comuna:"Viña del Mar"},
-    {nombre:"Clínica Ciudad del Mar",comuna:"Viña del Mar"},
-    {nombre:"Clínica Reñaca",comuna:"Viña del Mar"}]},
-  { region:"Metropolitana de Santiago", centros:[
-    {nombre:"Clínica Las Condes",comuna:"Las Condes"},
-    {nombre:"Clínica Alemana",comuna:"Vitacura"},
-    {nombre:"Clínica Santa María",comuna:"Providencia"},
-    {nombre:"Clínica Indisa",comuna:"Providencia"},
-    {nombre:"Clínica UC Christus",comuna:"Santiago"},
-    {nombre:"Clínica Dávila",comuna:"Recoleta"},
-    {nombre:"RedSalud Providencia",comuna:"Providencia"},
-    {nombre:"Megasalud Santiago Centro",comuna:"Santiago"},
-    {nombre:"Hospital Clínico Universidad de Chile",comuna:"Independencia"},
-    {nombre:"Hospital San Juan de Dios",comuna:"Santiago"},
-    {nombre:"Hospital Barros Luco Trudeau",comuna:"San Miguel"},
-    {nombre:"Hospital Sótero del Río",comuna:"Puente Alto"},
-    {nombre:"Hospital San José",comuna:"Independencia"},
-    {nombre:"Clínica Bupa Santiago (ex Cruz Blanca)",comuna:"Santiago"},
-    {nombre:"Clínica Vespucio",comuna:"La Florida"},
-    {nombre:"Integramédica Providencia",comuna:"Providencia"}]},
-  { region:"Libertador General Bernardo O'Higgins", centros:[
-    {nombre:"Hospital Regional Rancagua",comuna:"Rancagua"},
-    {nombre:"Clínica Los Andes",comuna:"Rancagua"},
-    {nombre:"RedSalud Rancagua",comuna:"Rancagua"}]},
-  { region:"Maule", centros:[
-    {nombre:"Hospital Regional de Talca",comuna:"Talca"},
-    {nombre:"Clínica Ancora",comuna:"Talca"},
-    {nombre:"Clínica Andes Salud Talca",comuna:"Talca"}]},
-  { region:"Ñuble", centros:[
-    {nombre:"Hospital Clínico Herminda Martín",comuna:"Chillán"},
-    {nombre:"Clínica Bío Bío Chillán",comuna:"Chillán"}]},
-  { region:"Biobío", centros:[
-    {nombre:"Hospital Regional Guillermo Grant Benavente",comuna:"Concepción"},
-    {nombre:"Clínica Sanatorio Alemán",comuna:"Concepción"},
-    {nombre:"Clínica Bío Bío",comuna:"Concepción"},
-    {nombre:"RedSalud Concepción",comuna:"Concepción"}]},
-  { region:"La Araucanía", centros:[
-    {nombre:"Hospital Hernán Henríquez Aravena",comuna:"Temuco"},
-    {nombre:"Clínica Alemana de Temuco",comuna:"Temuco"},
-    {nombre:"Clínica Mayor Temuco",comuna:"Temuco"}]},
-  { region:"Los Ríos", centros:[
-    {nombre:"Hospital Base Valdivia",comuna:"Valdivia"},
-    {nombre:"Clínica Alemana Valdivia",comuna:"Valdivia"}]},
-  { region:"Los Lagos", centros:[
-    {nombre:"Hospital Base Osorno",comuna:"Osorno"},
-    {nombre:"Hospital Puerto Montt Dr. Eduardo Schütz",comuna:"Puerto Montt"},
-    {nombre:"Clínica Alemana Puerto Montt",comuna:"Puerto Montt"},
-    {nombre:"Clínica Puerto Varas",comuna:"Puerto Varas"}]},
-  { region:"Aysén", centros:[
-    {nombre:"Hospital Regional Coyhaique",comuna:"Coyhaique"}]},
-  { region:"Magallanes y de la Antártica Chilena", centros:[
-    {nombre:"Hospital Clínico Magallanes",comuna:"Punta Arenas"},
-    {nombre:"Clínica Magallanes",comuna:"Punta Arenas"}]}
+  { region:"Arica y Parinacota", centros:[{nombre:"Hospital Dr. Juan Noé Crevani",comuna:"Arica"},{nombre:"Clínica Nuestra Señora de Guadalupe",comuna:"Arica"}]},
+  { region:"Tarapacá", centros:[{nombre:"Hospital Regional Dr. Ernesto Torres Galdames",comuna:"Iquique"},{nombre:"Clínica Iquique (RedSalud)",comuna:"Iquique"}]},
+  { region:"Antofagasta", centros:[{nombre:"Hospital Regional Dr. Leonardo Guzmán",comuna:"Antofagasta"},{nombre:"Clínica Antofagasta",comuna:"Antofagasta"},{nombre:"Megasalud Antofagasta",comuna:"Antofagasta"}]},
+  { region:"Atacama", centros:[{nombre:"Hospital Regional San José del Carmen",comuna:"Copiapó"}]},
+  { region:"Coquimbo", centros:[{nombre:"Hospital San Juan de Dios de La Serena",comuna:"La Serena"},{nombre:"Clínica Elqui",comuna:"La Serena"},{nombre:"Clínica Coquimbo",comuna:"Coquimbo"}]},
+  { region:"Valparaíso", centros:[{nombre:"Hospital Carlos Van Buren",comuna:"Valparaíso"},{nombre:"Clínica Van Buren",comuna:"Valparaíso"},{nombre:"Clínica ReSalud Valparaíso",comuna:"Valparaíso"},{nombre:"Hospital Gustavo Fricke",comuna:"Viña del Mar"},{nombre:"Clínica Ciudad del Mar",comuna:"Viña del Mar"},{nombre:"Clínica Reñaca",comuna:"Viña del Mar"}]},
+  { region:"Metropolitana de Santiago", centros:[{nombre:"Clínica Las Condes",comuna:"Las Condes"},{nombre:"Clínica Alemana",comuna:"Vitacura"},{nombre:"Clínica Santa María",comuna:"Providencia"},{nombre:"Clínica Indisa",comuna:"Providencia"},{nombre:"Clínica UC Christus",comuna:"Santiago"},{nombre:"Clínica Dávila",comuna:"Recoleta"},{nombre:"RedSalud Providencia",comuna:"Providencia"},{nombre:"Megasalud Santiago Centro",comuna:"Santiago"},{nombre:"Hospital Clínico Universidad de Chile",comuna:"Independencia"},{nombre:"Hospital San Juan de Dios",comuna:"Santiago"},{nombre:"Hospital Barros Luco Trudeau",comuna:"San Miguel"},{nombre:"Hospital Sótero del Río",comuna:"Puente Alto"},{nombre:"Hospital San José",comuna:"Independencia"},{nombre:"Clínica Bupa Santiago (ex Cruz Blanca)",comuna:"Santiago"},{nombre:"Clínica Vespucio",comuna:"La Florida"},{nombre:"Integramédica Providencia",comuna:"Providencia"}]},
+  { region:"Libertador General Bernardo O'Higgins", centros:[{nombre:"Hospital Regional Rancagua",comuna:"Rancagua"},{nombre:"Clínica Los Andes",comuna:"Rancagua"},{nombre:"RedSalud Rancagua",comuna:"Rancagua"}]},
+  { region:"Maule", centros:[{nombre:"Hospital Regional de Talca",comuna:"Talca"},{nombre:"Clínica Ancora",comuna:"Talca"},{nombre:"Clínica Andes Salud Talca",comuna:"Talca"}]},
+  { region:"Ñuble", centros:[{nombre:"Hospital Clínico Herminda Martín",comuna:"Chillán"},{nombre:"Clínica Bío Bío Chillán",comuna:"Chillán"}]},
+  { region:"Biobío", centros:[{nombre:"Hospital Regional Guillermo Grant Benavente",comuna:"Concepción"},{nombre:"Clínica Sanatorio Alemán",comuna:"Concepción"},{nombre:"Clínica Bío Bío",comuna:"Concepción"},{nombre:"RedSalud Concepción",comuna:"Concepción"}]},
+  { region:"La Araucanía", centros:[{nombre:"Hospital Hernán Henríquez Aravena",comuna:"Temuco"},{nombre:"Clínica Alemana de Temuco",comuna:"Temuco"},{nombre:"Clínica Mayor Temuco",comuna:"Temuco"}]},
+  { region:"Los Ríos", centros:[{nombre:"Hospital Base Valdivia",comuna:"Valdivia"},{nombre:"Clínica Alemana Valdivia",comuna:"Valdivia"}]},
+  { region:"Los Lagos", centros:[{nombre:"Hospital Base Osorno",comuna:"Osorno"},{nombre:"Hospital Puerto Montt Dr. Eduardo Schütz",comuna:"Puerto Montt"},{nombre:"Clínica Alemana Puerto Montt",comuna:"Puerto Montt"},{nombre:"Clínica Puerto Varas",comuna:"Puerto Varas"}]},
+  { region:"Aysén", centros:[{nombre:"Hospital Regional Coyhaique",comuna:"Coyhaique"}]},
+  { region:"Magallanes y de la Antártica Chilena", centros:[{nombre:"Hospital Clínico Magallanes",comuna:"Punta Arenas"},{nombre:"Clínica Magallanes",comuna:"Punta Arenas"}]}
 ];
 
 const ESPECIALIDADES_MEDICAS = [
@@ -218,31 +151,10 @@ const TIPO_LABELS = {
 };
 
 const FORM_CONFIG = {
-  evento:{
-    titulo:"Nombre del evento",
-    placeholder:"Ej: Cumpleaños de Ana, reunión de apoderados",
-    ubicacion:"Lugar del evento (opcional)",
-    ubicacionPlaceholder:"Ej: Centro de eventos, colegio o domicilio",
-    notasPlaceholder:"Horario de llegada, contacto u otro detalle útil",
-    sugerencias:["Cumpleaños","Reunión","Matrimonio","Concierto","Actividad escolar"]
-  },
-  tramite:{
-    titulo:"¿Qué trámite debes realizar?",
-    placeholder:"Ej: Renovar licencia de conducir",
-    ubicacion:"Lugar o institución (opcional)",
-    ubicacionPlaceholder:"Ej: Municipalidad, Registro Civil, banco",
-    notasPlaceholder:"Documentos necesarios, número de atención o requisitos",
-    sugerencias:["Renovar licencia","Pagar permiso de circulación","Hora en Registro Civil","Trámite bancario","Presentar documentos"]
-  },
-  otro:{
-    titulo:"¿Qué quieres recordar?",
-    placeholder:"Ej: Llamar al técnico o pagar una cuenta",
-    ubicacion:"Lugar (opcional)",
-    ubicacionPlaceholder:"Ej: Casa, oficina o dirección",
-    notasPlaceholder:"Agrega cualquier detalle que te ayude a recordarlo",
-    sugerencias:["Pagar una cuenta","Hacer una llamada","Retirar un pedido","Mantención del auto"]
-  },
-  cita_medica:{titulo:"",placeholder:"",ubicacion:"",ubicacionPlaceholder:"",notasPlaceholder:"Ej: Ir en ayunas o llevar exámenes anteriores",sugerencias:[]},
+  evento:{titulo:"Nombre del evento",placeholder:"Ej: Cumpleaños de Ana, reunión",ubicacion:"Lugar del evento (opcional)",ubicacionPlaceholder:"Ej: Centro de eventos, colegio",notasPlaceholder:"Horario o detalles",sugerencias:["Cumpleaños","Reunión","Matrimonio","Concierto"]},
+  tramite:{titulo:"¿Qué trámite debes realizar?",placeholder:"Ej: Renovar licencia",ubicacion:"Lugar o institución (opcional)",ubicacionPlaceholder:"Ej: Municipalidad, Registro Civil",notasPlaceholder:"Documentos necesarios",sugerencias:["Renovar licencia","Pagar permiso","Hora Registro Civil"]},
+  otro:{titulo:"¿Qué quieres recordar?",placeholder:"Ej: Llamar al técnico",ubicacion:"Lugar (opcional)",ubicacionPlaceholder:"Ej: Casa, oficina",notasPlaceholder:"Detalles útiles",sugerencias:["Pagar cuenta","Hacer llamada","Retirar pedido"]},
+  cita_medica:{titulo:"",placeholder:"",ubicacion:"",ubicacionPlaceholder:"",notasPlaceholder:"Ej: Ir en ayunas",sugerencias:[]},
   compra:{titulo:"",placeholder:"",ubicacion:"",ubicacionPlaceholder:"",notasPlaceholder:"",sugerencias:[]}
 };
 
@@ -254,7 +166,7 @@ const ANTICIPACION_OPCIONES = [
 ];
 
 /* ============================================================
-   3) ESTADO GLOBAL Y RUTEO SIMPLE (hash based)
+   3) ESTADO GLOBAL Y RUTEO
    ============================================================ */
 let STATE = {
   user: null,
@@ -282,7 +194,7 @@ async function init(){
 }
 
 /* ============================================================
-   4) UTILIDADES
+   4) UTILIDADES Y GREEN.API WHATSAPP INTEGRATION
    ============================================================ */
 function normalizarTelefono(telefono){
   let limpio = (telefono||"").replace(/[^\d+]/g,"");
@@ -291,6 +203,27 @@ function normalizarTelefono(telefono){
   if(limpio.startsWith("9") && limpio.length===9) return "56"+limpio;
   return limpio;
 }
+
+// Función para enviar WhatsApp usando Green.API Console
+async function enviarWhatsAppGreenAPI(telefono, mensaje){
+  const limpio = normalizarTelefono(telefono);
+  if(!limpio) throw new Error("Número de teléfono inválido");
+  const chatId = limpio + "@c.us";
+  const url = `${GREEN_API_URL}/waInstance${GREEN_API_ID_INSTANCE}/sendMessage/${GREEN_API_TOKEN_INSTANCE}`;
+  
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ chatId, message: mensaje })
+  });
+  
+  const data = await response.json();
+  if(!response.ok){
+    throw new Error(data.message || "Error al enviar mensaje por Green.API");
+  }
+  return data;
+}
+
 function formatearFechaLarga(fecha){
   const [y,m,d] = fecha.split("-").map(Number);
   const dt = new Date(y,m-1,d);
@@ -308,8 +241,6 @@ function normalizarTextoPresentacion(valor){
   }).join("\n");
 }
 
-// Los contactos se guardan como JSON en el campo existente telefono_whatsapp.
-// Así las instalaciones anteriores siguen funcionando sin requerir una migración.
 function contactosWhatsApp(perfil = STATE.perfil){
   const bruto = perfil?.telefono_whatsapp;
   try {
@@ -368,12 +299,6 @@ function construirMensaje(r){
   return partes.join("\n");
 }
 
-
-function linkWhatsApp(r){
-  const mensaje = encodeURIComponent(construirMensaje(r));
-  const telefono = destinatariosRecordatorio(r)[0]?.telefono || "";
-  return `https://wa.me/${telefono}?text=${mensaje}`;
-}
 function diasRestantes(fecha,hora){
   const objetivo = new Date(`${fecha}T${hora}`);
   const diffMs = objetivo.getTime() - Date.now();
@@ -387,11 +312,10 @@ function diasRestantes(fecha,hora){
 function esc(s){ return (s??"").toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 /* ============================================================
-   5) RENDER PRINCIPAL
+   5) RENDER PRINCIPAL Y RUTAS
    ============================================================ */
 async function render(){
   const hash = window.location.hash.replace("#","") || (STATE.user ? "dashboard" : "landing");
-
   const rutasProtegidas = ["dashboard", "nuevo", "editar/", "perfil"];
   const requiereLogin = rutasProtegidas.some(r => hash===r || hash.startsWith(r));
   if(!STATE.user && requiereLogin){ navigate("login"); return; }
@@ -415,13 +339,13 @@ async function render(){
     bindForm();
     return;
   }
-  if(hash==="perfil") { app.innerHTML = viewPerfilLoading(); await bindPerfilLoad(); return; }
+  if(hash==="perfil") { await bindPerfilLoad(); return; }
 
   navigate(STATE.user ? "dashboard" : "landing");
 }
 
 /* ============================================================
-   6) NAVBAR / BOTTOM NAV
+   6) NAVBAR Y BOTTOM NAV
    ============================================================ */
 function navbar(showAuth=true){
   return `
@@ -431,11 +355,11 @@ function navbar(showAuth=true){
         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-mint-500 text-lg shadow-glow">🔔</span>
         <span class="font-display text-lg font-bold tracking-tight text-sand">Recorda</span>
       </a>
-                ${showAuth ? `
-          <div class="flex items-center gap-2">
-            <a href="#login" class="btn-secondary !px-4 !py-2 text-sm">Iniciar sesión</a>
-            <a href="#login" onclick="setTimeout(()=>document.getElementById('modo-registro')?.click(),50)" class="btn-primary !px-4 !py-2 text-sm hidden sm:inline-flex">Crear cuenta</a>
-          </div>` : ``}
+      ${showAuth ? `
+        <div class="flex items-center gap-2">
+          <a href="#login" class="btn-secondary !px-4 !py-2 text-sm">Iniciar sesión</a>
+          <a href="#login" onclick="setTimeout(()=>document.getElementById('modo-registro')?.click(),50)" class="btn-primary !px-4 !py-2 text-sm hidden sm:inline-flex">Crear cuenta</a>
+        </div>` : ``}
     </div>
   </header>`;
 }
@@ -457,58 +381,30 @@ function bottomNav(active){
    ============================================================ */
 function viewLanding(){
   const FEATURES = [
-    ["🩺","Citas médicas ordenadas","Elige el centro médico o clínica desde el listado por región, o escríbelo tú mismo. Guarda especialidad, médico y N° de ficha."],
-    ["📲","Aviso directo a tu WhatsApp","El mensaje llega con todo el detalle: fecha, hora, lugar y notas, listo para leer de un vistazo antes de salir."],
-    ["📧","También por correo","Elige si quieres el aviso por email, WhatsApp o ambos. Tú decides cómo te avisamos."],
-    ["⏰","Tú eliges la anticipación","1 hora, 3 horas, 1 día, 1 semana antes. Ajusta el aviso a lo que necesitas."],
-    ["🎉","No solo horas médicas","Cumpleaños, trámites, reuniones, pagos, controles del auto: todo lo que se te suele olvidar."],
-    ["📊","Todos tus registros a mano","Historial completo de tus recordatorios pasados y próximos, ordenados y buscables."]
-  ];
-  const PASOS = [
-    ["01","Crea tu cuenta","Regístrate gratis con tu correo en menos de un minuto."],
-    ["02","Agrega tu recordatorio","Cita médica, evento o trámite. Completa los detalles que importan."],
-    ["03","Elige cómo avisarte","WhatsApp, correo o ambos, con la anticipación que prefieras."],
-    ["04","Listo, no se te olvida","Recorda te avisa a tiempo, con todos los detalles ordenados."]
+    ["🩺","Citas médicas ordenadas","Elige el centro médico o clínica desde el listado por región. Guarda especialidad, médico y detalles."],
+    ["📲","Aviso directo por Green.API","Los mensajes llegan por WhatsApp con todo el detalle de fecha, hora y lugar de forma automatizada."],
+    ["⏰","Tú eliges la anticipación","1 hora, 3 horas, 1 día, 1 semana antes. Ajusta el aviso a lo que necesites."],
+    ["🎉","No solo horas médicas","Cumpleaños, trámites, reuniones, pagos y controles todo en un solo lugar."]
   ];
   return `
   <main class="relative">
     ${navbar(true)}
     <section class="relative overflow-hidden px-5 pb-20 pt-16 sm:pb-28 sm:pt-24">
       <div class="mx-auto max-w-4xl text-center">
-        <span class="glass mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm text-mint-400">🇨🇱 Hecho para que a los chilenos no se les pasen sus horas</span>
+        <span class="glass mb-6 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm text-mint-400">🇨🇱 Recordatorios con WhatsApp vía Green.API</span>
         <h1 class="font-display text-4xl font-bold leading-[1.05] tracking-tight text-sand sm:text-6xl">
           Tu hora médica, tu evento, <span class="text-gradient">tu trámite.</span><br/>Nunca más un olvido.
         </h1>
-        <p class="mx-auto mt-6 max-w-xl text-base text-sand/60 sm:text-lg">Guarda tus citas y eventos importantes y recibe un aviso automático por WhatsApp o correo, con todos los detalles, antes de que se te olvide. 🔔</p>
+        <p class="mx-auto mt-6 max-w-xl text-base text-sand/60 sm:text-lg">Guarda tus citas y recibe avisos automáticos en tu WhatsApp. 🔔</p>
         <div class="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a href="#login" onclick="setTimeout(()=>document.getElementById('modo-registro')?.click(),50)" class="btn-primary w-full sm:w-auto">Crear mi cuenta gratis ✨</a>
           <a href="#login" class="btn-secondary w-full sm:w-auto">Ya tengo cuenta</a>
-        </div>
-        <p class="mt-4 text-xs text-sand/40">Gratis para empezar · No necesitas tarjeta de crédito</p>
-      </div>
-      <div class="mx-auto mt-16 max-w-md animate-float">
-        <div class="card p-5 text-left">
-          <div class="flex items-center justify-between">
-            <span class="chip chip-active">🩺 Cita médica</span>
-            <span class="text-xs text-sand/40">Mañana · 09:30</span>
-          </div>
-          <h3 class="mt-4 font-display text-lg font-semibold text-sand">Control cardiología</h3>
-          <p class="mt-1 text-sm text-sand/60">Clínica Las Condes · Dr. Andrés Fuentes</p>
-          <div class="mt-4 flex items-center gap-2 text-xs text-sand/50">
-            <span class="rounded-full bg-mint-500/15 px-3 py-1 text-mint-400">📲 WhatsApp</span>
-            <span class="rounded-full bg-white/5 px-3 py-1">📧 Correo</span>
-            <span class="rounded-full bg-white/5 px-3 py-1">⏰ 3 h antes</span>
-          </div>
         </div>
       </div>
     </section>
     <section class="px-5 py-16 sm:py-24">
       <div class="mx-auto max-w-6xl">
-        <div class="mx-auto max-w-xl text-center">
-          <h2 class="font-display text-3xl font-bold text-sand sm:text-4xl">Todo lo que necesitas para no olvidar nada</h2>
-          <p class="mt-3 text-sand/60">Pensado para la vida real: horas médicas que se agendan con meses de anticipación, eventos, trámites y todo lo demás.</p>
-        </div>
-        <div class="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           ${FEATURES.map(([e,t,x])=>`
             <div class="card p-6 transition hover:-translate-y-1">
               <span class="text-3xl">${e}</span>
@@ -516,26 +412,6 @@ function viewLanding(){
               <p class="mt-2 text-sm leading-relaxed text-sand/60">${x}</p>
             </div>`).join("")}
         </div>
-      </div>
-    </section>
-    <section class="px-5 py-16 sm:py-24">
-      <div class="mx-auto max-w-6xl">
-        <div class="mx-auto max-w-xl text-center"><h2 class="font-display text-3xl font-bold text-sand sm:text-4xl">Cómo funciona</h2></div>
-        <div class="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          ${PASOS.map(([n,t,x])=>`
-            <div class="relative">
-              <span class="font-display text-4xl font-bold text-mint-500/30">${n}</span>
-              <h3 class="mt-2 font-display text-base font-semibold text-sand">${t}</h3>
-              <p class="mt-1.5 text-sm text-sand/60">${x}</p>
-            </div>`).join("")}
-        </div>
-      </div>
-    </section>
-    <section class="px-5 pb-24">
-      <div class="card mx-auto max-w-4xl bg-gradient-to-br from-mint-500/10 to-transparent p-10 text-center sm:p-16">
-        <h2 class="font-display text-3xl font-bold text-sand sm:text-4xl">Deja de depender de tu memoria 🧠</h2>
-        <p class="mx-auto mt-3 max-w-md text-sand/60">Crea tu cuenta gratis y agenda tu primer recordatorio en menos de 2 minutos.</p>
-        <a href="#login" onclick="setTimeout(()=>document.getElementById('modo-registro')?.click(),50)" class="btn-primary mt-8 inline-flex">Empezar gratis ahora →</a>
       </div>
     </section>
     <footer class="border-t border-white/5 px-5 py-8 text-center text-xs text-sand/30">Recorda 🔔 — Hecho en Chile. ${new Date().getFullYear()}</footer>
@@ -611,7 +487,7 @@ function bindLogin(){
       if(modo==="registro"){
         const { error } = await sb.auth.signUp({ email, password, options:{ data:{ nombre } } });
         if(error) throw error;
-        $("auth-aviso").textContent = "¡Cuenta creada! Revisa tu correo si te pedimos confirmarlo, o inicia sesión directamente. 🎉";
+        $("auth-aviso").textContent = "¡Cuenta creada! Inicia sesión directamente. 🎉";
         $("auth-aviso").classList.remove("hidden");
         setModo("login");
       } else {
@@ -620,20 +496,13 @@ function bindLogin(){
         navigate("dashboard");
       }
     } catch(err){
-      $("auth-error").textContent = "⚠️ " + traducirError(err?.message);
+      $("auth-error").textContent = "⚠️ " + (err?.message || "Error de autenticación");
       $("auth-error").classList.remove("hidden");
     } finally {
       $("auth-submit").disabled = false;
       $("auth-submit").textContent = modo==="login" ? "Iniciar sesión →" : "Crear cuenta →";
     }
   };
-}
-function traducirError(msg){
-  if(!msg) return "Ocurrió un error. Intenta de nuevo.";
-  if(msg.includes("Invalid login credentials")) return "Correo o contraseña incorrectos.";
-  if(msg.includes("User already registered")) return "Ese correo ya tiene una cuenta. Intenta iniciar sesión.";
-  if(msg.includes("Password should be at least")) return "La contraseña debe tener al menos 6 caracteres.";
-  return msg;
 }
 
 /* ============================================================
@@ -662,7 +531,7 @@ async function loadReminders(){
     .order("hora",{ascending:true});
   if(error){
     console.error("Error cargando recordatorios:", error);
-    STATE.loadError = error.message || "No se pudieron cargar tus recordatorios.";
+    STATE.loadError = error.message;
     STATE.reminders = [];
     return;
   }
@@ -679,18 +548,18 @@ function viewDashboard(){
 
   return `
   <main class="min-h-screen pb-24 sm:pb-10">
-    ${STATE.loadError ? `<div class="mx-auto max-w-5xl px-5 pt-4"><div class="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">⚠️ No se pudieron cargar tus recordatorios: ${STATE.loadError}</div></div>` : ""}
+    ${STATE.loadError ? `<div class="mx-auto max-w-5xl px-5 pt-4"><div class="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">⚠️ Error: ${STATE.loadError}</div></div>` : ""}
     <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl">
       <div class="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
         <div class="flex items-center gap-2">
           <span class="text-xl">🔔</span>
           <div>
             <p class="font-display text-sm font-semibold text-sand">${nombre ? `Hola, ${esc(nombre.split(" ")[0])} 👋` : "Hola 👋"}</p>
-            <p class="text-xs text-sand/40">Aquí están tus recordatorios</p>
+            <p class="text-xs text-sand/40">Tus recordatorios y WhatsApp</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
-<a href="#nuevo" class="btn-primary hidden !px-4 !py-2 text-sm sm:inline-flex">➕ Nuevo</a>
+          <a href="#nuevo" class="btn-primary hidden !px-4 !py-2 text-sm sm:inline-flex">➕ Nuevo</a>
           <a href="#perfil" class="btn-secondary hidden !px-4 !py-2 text-sm sm:inline-flex">👤 Perfil</a>
           <button id="btn-logout" class="btn-ghost !px-3 !py-2 text-sm">Salir</button>
         </div>
@@ -711,16 +580,10 @@ function viewDashboard(){
           <div class="card flex flex-col items-center gap-3 p-12 text-center">
             <span class="text-4xl">📭</span>
             <p class="font-display text-lg font-semibold text-sand">No tienes recordatorios próximos</p>
-            <p class="max-w-xs text-sm text-sand/50">Crea tu primera cita médica, evento o trámite para que no se te olvide.</p>
             <a href="#nuevo" class="btn-primary mt-2">➕ Crear recordatorio</a>
           </div>` : `
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">${filtrados.map(reminderCard).join("")}</div>`}
       </div>
-      ${pasados.length>0 ? `
-      <details class="mt-10">
-        <summary class="cursor-pointer text-sm font-medium text-sand/40 hover:text-sand/70">Ver ${pasados.length} recordatorio(s) pasado(s)</summary>
-        <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">${pasados.map(reminderCard).join("")}</div>
-      </details>` : ``}
     </div>
     <a href="#nuevo" class="fixed bottom-20 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-mint-500 text-2xl text-ink-950 shadow-glow sm:hidden">➕</a>
     ${bottomNav("dashboard")}
@@ -744,11 +607,10 @@ function reminderCard(r){
     ${r.tipo!=="cita_medica" && r.ubicacion ? `<p class="mt-1 text-sm text-sand/50">📍 ${esc(r.ubicacion)}</p>` : ``}
     <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-sand/50">
       ${r.avisar_whatsapp ? `<span class="rounded-full bg-mint-500/15 px-3 py-1 text-mint-400">📲 ${destinatarios.length ? esc(destinatarios.map(d=>d.nombre).join(", ")) : "WhatsApp"}</span>` : ``}
-      ${r.avisar_email ? `<span class="rounded-full bg-white/5 px-3 py-1">📧 Correo</span>` : ``}
       <span class="rounded-full bg-white/5 px-3 py-1">⏰ Aviso ${anticipacionTxt}</span>
     </div>
     <div class="mt-5 flex flex-wrap gap-2 border-t border-white/5 pt-4">
-      ${r.avisar_whatsapp && destinatarios.length ? `<a href="${linkWhatsApp(r)}" target="_blank" rel="noopener noreferrer" class="btn-ghost !px-3 !py-2 text-mint-400" title="Esto es solo una vista previa manual — el aviso real llega solo, automáticamente">📲 Vista previa</a>` : ``}
+      ${r.avisar_whatsapp && destinatarios.length ? `<button data-enviar-wa="${r.id}" class="btn-ghost !px-3 !py-2 text-mint-400">📲 Enviar WhatsApp</button>` : ``}
       <a href="#editar/${r.id}" class="btn-ghost !px-3 !py-2">✏️ Editar</a>
       <button data-del="${r.id}" class="btn-ghost !px-3 !py-2 text-coral-400">🗑️ Eliminar</button>
     </div>
@@ -759,6 +621,35 @@ function bindDashboard(){
   document.querySelectorAll("#filtros button").forEach(b=>{
     b.onclick = ()=>{ STATE.filtro = b.dataset.f; render(); };
   });
+
+  // Envío directo por Green.API desde la tarjeta
+  document.querySelectorAll("[data-enviar-wa]").forEach(b=>{
+    b.onclick = async ()=>{
+      const id = b.dataset.enviarWa;
+      const r = STATE.reminders.find(x=>x.id===id);
+      if(!r) return;
+      const destinatarios = destinatariosRecordatorio(r);
+      if(!destinatarios.length){
+        alert("No hay destinatarios configurados para este recordatorio.");
+        return;
+      }
+      b.disabled = true;
+      b.textContent = "Enviando...";
+      try {
+        const mensaje = construirMensaje(r);
+        for(const dest of destinatarios){
+          await enviarWhatsAppGreenAPI(dest.telefono, mensaje);
+        }
+        alert("¡Mensaje(s) enviado(s) exitosamente por Green.API! 🚀");
+      } catch(err){
+        alert("⚠️ Error al enviar WhatsApp con Green.API: " + (err.message || err));
+      } finally {
+        b.disabled = false;
+        b.textContent = "📲 Enviar WhatsApp";
+      }
+    };
+  });
+
   document.querySelectorAll("[data-del]").forEach(b=>{
     b.onclick = async ()=>{
       if(!confirm("¿Seguro que quieres eliminar este recordatorio?")) return;
@@ -771,7 +662,7 @@ function bindDashboard(){
 }
 
 /* ============================================================
-   10) FORMULARIO: NUEVO / EDITAR RECORDATORIO
+   10) FORMULARIO: NUEVO / EDITAR
    ============================================================ */
 function viewForm(existing){
   const esEdicion = !!existing;
@@ -796,7 +687,7 @@ function viewForm(existing){
         <a href="#dashboard" class="btn-ghost !px-2 !py-2">←</a>
         <div>
           <p class="font-display text-sm font-semibold text-sand">${esEdicion ? "Editar recordatorio ✏️" : "Nuevo recordatorio 🔔"}</p>
-          <p class="text-xs text-sand/40">${esEdicion ? "Actualiza los detalles" : "Elige un tipo y completa solo lo necesario"}</p>
+          <p class="text-xs text-sand/40">Configuración de aviso por Green.API</p>
         </div>
       </div>
     </header>
@@ -821,10 +712,10 @@ function viewForm(existing){
         </section>
 
         <section id="bloque-cita" class="card space-y-5 p-5 sm:p-6 ${STATE.formTempTipo!=='cita_medica'?'hidden':''}">
-          <div><p class="font-display font-semibold text-sand">🩺 Detalles de la cita</p><p class="mt-1 text-xs text-sand/50">La fecha y hora van primero; agrega aquí la información útil para llegar preparado.</p></div>
+          <div><p class="font-display font-semibold text-sand">🩺 Detalles de la cita</p></div>
           <div>
             <label class="label-field">Centro médico o clínica</label>
-            <input id="f-centro-manual" class="input-field" placeholder="Ej: Clínica Dávila, CESFAM, IntegraMédica…" value="${esc(r.centro_medico)}" />
+            <input id="f-centro-manual" class="input-field" placeholder="Ej: Clínica Dávila, Hospital…" value="${esc(r.centro_medico)}" />
           </div>
           <div>
             <label class="label-field">Especialidad</label>
@@ -834,13 +725,12 @@ function viewForm(existing){
               <option value="otra" ${r.especialidad && !especialidadConocida?'selected':''}>Otra especialidad…</option>
             </select>
             <div id="bloque-otra-especialidad" class="mt-2 ${r.especialidad && !especialidadConocida?'':'hidden'}">
-              <label class="label-field text-xs">Escribe la especialidad</label>
-              <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Medicina del sueño" value="${r.especialidad && !especialidadConocida ? esc(r.especialidad) : ''}" />
+              <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Medicina general" value="${r.especialidad && !especialidadConocida ? esc(r.especialidad) : ''}" />
             </div>
           </div>
           <div class="form-grid-2">
-            <div><label class="label-field">Médico(a) o profesional <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-medico" class="input-field" placeholder="Ej: Dra. Andrea Muñoz" value="${esc(r.medico)}" /></div>
-            <div><label class="label-field">Dirección exacta <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-direccion" class="input-field" placeholder="Ej: Av. Providencia 1234, piso 5" value="${esc(r.direccion)}" /></div>
+            <div><label class="label-field">Médico(a) <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-medico" class="input-field" placeholder="Dr. Juan Pérez" value="${esc(r.medico)}" /></div>
+            <div><label class="label-field">Dirección <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-direccion" class="input-field" placeholder="Av. Providencia 123" value="${esc(r.direccion)}" /></div>
           </div>
         </section>
 
@@ -849,57 +739,36 @@ function viewForm(existing){
           <input id="f-ubicacion" class="input-field" placeholder="${configInicial.ubicacionPlaceholder}" value="${esc(r.ubicacion)}" />
         </section>
 
-        <section id="bloque-evento" class="card space-y-4 p-5 ${STATE.formTempTipo==='evento'?'':'hidden'}">
-          <div><p class="font-display font-semibold text-sand">🎒 ¿Debes llevar algo?</p><p class="mt-1 text-xs text-sand/50">Opcional. Escribe elementos separados por coma.</p></div>
-          <input id="f-llevar" class="input-field" placeholder="Ej: regalo, entradas, chaqueta, documentos" value="${esc(llevarDefault)}" />
-        </section>
-
         <section id="bloque-compra" class="card space-y-5 p-5 sm:p-6 ${STATE.formTempTipo==='compra'?'':'hidden'}">
-          <div><p class="font-display font-semibold text-sand">🛒 Lista de compras</p><p class="mt-1 text-xs text-sand/50">Agrega cada producto por separado. Es rápido y el mensaje llegará bien ordenado.</p></div>
+          <div><p class="font-display font-semibold text-sand">🛒 Lista de compras</p></div>
           <div id="lista-compra-items" class="space-y-2">
-            ${(productosCompra.length?productosCompra:[""]).map(item=>`<div class="compra-item flex items-center gap-2"><input class="input-field f-producto" placeholder="Ej: Leche" value="${esc(item)}" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg" aria-label="Eliminar producto">×</button></div>`).join("")}
+            ${(productosCompra.length?productosCompra:[""]).map(item=>`<div class="compra-item flex items-center gap-2"><input class="input-field f-producto" placeholder="Ej: Leche" value="${esc(item)}" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg">×</button></div>`).join("")}
           </div>
           <button type="button" id="btn-agregar-producto" class="btn-secondary w-full sm:w-auto">＋ Agregar producto</button>
-          <p class="text-xs text-sand/50">También puedes presionar Enter para agregar el siguiente producto.</p>
           <div>
             <label class="label-field">¿Cuándo enviarla?</label>
             <div class="flex flex-wrap gap-2" id="compra-modo-chips">
-              <button type="button" data-compra-modo="ahora" class="chip ${esEdicion?'':'chip-active'}">⚡ Enviar al guardar</button>
-              <button type="button" data-compra-modo="programada" class="chip ${esEdicion?'chip-active':''}">🗓️ Elegir fecha y hora</button>
+              <button type="button" data-compra-modo="ahora" class="chip ${esEdicion?'':'chip-active'}">⚡ Enviar ahora por Green.API</button>
+              <button type="button" data-compra-modo="programada" class="chip ${esEdicion?'chip-active':''}">🗓️ Programar</button>
             </div>
-            <p class="mt-2 text-xs text-sand/50">El envío inmediato puede tardar hasta un minuto.</p>
           </div>
         </section>
 
         <section id="bloque-notas" class="${STATE.formTempTipo==='compra'?'hidden':''}">
           <label class="label-field">Notas <span class="font-normal text-sand/40">(opcional)</span></label>
-          <textarea id="f-notas" class="input-field min-h-[100px] resize-y" placeholder="${configInicial.notasPlaceholder}">${esc(notasDefault)}</textarea>
+          <textarea id="f-notas" class="input-field min-h-[100px]" placeholder="${configInicial.notasPlaceholder}">${esc(notasDefault)}</textarea>
         </section>
 
         <section class="card space-y-5 p-5">
-          <div><p class="font-display font-semibold text-sand">🔔 Aviso por WhatsApp</p><p class="mt-1 text-xs text-sand/50">Elige uno o más destinatarios activos para este recordatorio.</p></div>
-          <label id="wrap-whatsapp" class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${(r.avisar_whatsapp ?? true)?'border-mint-500/60 bg-mint-500/10':'border-slate-200 bg-white'}">
-            <input type="checkbox" id="f-avisar-whatsapp" class="mt-1 accent-mint-500" ${(r.avisar_whatsapp ?? true)?'checked':''} />
-            <span><span class="block font-medium text-sand">📲 Enviar a WhatsApp</span><span class="text-xs text-sand/50">Selecciona los números a los que quieres avisar</span></span>
+          <div><p class="font-display font-semibold text-sand">📲 Destinatarios WhatsApp (Green.API)</p></div>
+          <label id="wrap-whatsapp" class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition border-mint-500/60 bg-mint-500/10">
+            <input type="checkbox" id="f-avisar-whatsapp" class="mt-1 accent-mint-500" checked />
+            <span><span class="block font-medium text-sand">Enviar notificación vía WhatsApp</span></span>
           </label>
-          <div id="campo-telefono" class="${(r.avisar_whatsapp ?? true)?'':'hidden'} space-y-2">
-            <label class="label-field">Enviar a</label>
-            ${contactosDisponibles.length ? contactosDisponibles.map(c=>`<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><input type="checkbox" class="f-destinatario accent-mint-500" value="${esc(c.id)}" ${destinatariosIniciales.includes(c.id)?'checked':''} /><span class="min-w-0"><span class="block font-medium text-sand">${esc(c.nombre)}</span><span class="block text-xs text-sand/50">${esc(c.telefono)}</span></span></label>`).join("") : `<div class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">No tienes números activos. Agrégalos o actívalos en tu perfil.</div>`}
+          <div id="campo-telefono" class="space-y-2">
+            <label class="label-field">Selecciona los números</label>
+            ${contactosDisponibles.length ? contactosDisponibles.map(c=>`<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><input type="checkbox" class="f-destinatario accent-mint-500" value="${esc(c.id)}" ${destinatariosIniciales.includes(c.id)?'checked':''} /><span class="min-w-0"><span class="block font-medium text-sand">${esc(c.nombre)}</span><span class="block text-xs text-sand/50">${esc(c.telefono)}</span></span></label>`).join("") : `<div class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">No tienes números activos. Agrégalos en tu perfil.</div>`}
             <a href="#perfil" class="btn-ghost !px-0 !py-1 text-sm">⚙️ Administrar números</a>
-          </div>
-          <input type="checkbox" id="f-avisar-email" class="hidden" disabled />
-
-          <div id="bloque-anticipacion" class="${STATE.formTempTipo==='compra'?'hidden':''}">
-            <label class="label-field">¿Cuándo quieres recibir avisos?</label>
-            <p class="mb-3 text-xs text-sand/50">Puedes elegir más de una opción, por ejemplo 1 día y 6 horas antes.</p>
-            <div class="mb-3 flex flex-wrap gap-2" id="anticipacion-chips">
-              ${ANTICIPACION_OPCIONES.map(o=>`<button type="button" data-ant="${o.valor}" class="chip ${avisosSeleccionados.includes(o.valor)?'chip-active':''}">⏰ ${o.label}</button>`).join("")}
-              <button type="button" id="btn-ant-personalizada" class="chip ${avisoPersonalizado!==undefined?'chip-active':''}">⚙️ Fecha y hora exacta</button>
-            </div>
-            <div id="bloque-fecha-manual" class="form-grid-2 rounded-xl bg-slate-100 p-4 ${avisoPersonalizado!==undefined?'':'hidden'}">
-              <div><label class="label-field text-xs">Fecha del aviso</label><input id="f-fecha-aviso" type="date" class="input-field bg-white" /></div>
-              <div><label class="label-field text-xs">Hora del aviso</label><input id="f-hora-aviso" type="time" class="input-field bg-white" /></div>
-            </div>
           </div>
         </section>
 
@@ -911,7 +780,6 @@ function viewForm(existing){
   </main>`;
 }
 
-
 function bindForm(){
   const $ = id => document.getElementById(id);
   const normalizarTexto = valor => String(valor || "").split("\n").map(linea=>{
@@ -919,30 +787,8 @@ function bindForm(){
     if(!limpio) return "";
     return limpio.charAt(0).toLocaleUpperCase("es-CL")+limpio.slice(1).toLocaleLowerCase("es-CL");
   }).join("\n");
-  const recordatorioEditado = STATE.editId ? STATE.reminders.find(r=>r.id===STATE.editId) : null;
-  const estadoAvisosEditado = String(recordatorioEditado?.region || "").startsWith("__avisos:") ? (()=>{try{return JSON.parse(String(recordatorioEditado.region).slice(9));}catch{return null;}})() : null;
-  const avisosIniciales = estadoAvisosEditado?.todos?.length ? estadoAvisosEditado.todos.map(Number) : [Number(recordatorioEditado?.anticipacion_horas ?? 24)];
-  const anticipaciones = new Set(avisosIniciales.filter(h=>ANTICIPACION_OPCIONES.some(o=>o.valor===h)));
-  let anticipacionPersonalizada = avisosIniciales.find(h=>!ANTICIPACION_OPCIONES.some(o=>o.valor===h));
+
   let compraModo = STATE.editId ? "programada" : "ahora";
-
-  if(STATE.editId){
-    const r = STATE.reminders.find(x=>x.id===STATE.editId);
-    if(r && anticipacionPersonalizada!==undefined){
-      const fechaCita = new Date(`${r.fecha}T${r.hora}`);
-      fechaCita.setHours(fechaCita.getHours() - anticipacionPersonalizada);
-      setTimeout(()=>{
-        if($("f-fecha-aviso")) $("f-fecha-aviso").value = fechaCita.toISOString().split("T")[0];
-        if($("f-hora-aviso")) $("f-hora-aviso").value = fechaCita.toTimeString().slice(0,5);
-      },50);
-    }
-  }
-
-  function renderSugerencias(config){
-    const contenedor = $("sugerencias-titulo");
-    contenedor.innerHTML = (config.sugerencias||[]).map(s=>`<button type="button" class="chip !px-3 !py-1.5" data-sugerencia="${esc(s)}">${esc(s)}</button>`).join("");
-    contenedor.querySelectorAll("button").forEach(b=>b.onclick=()=>{$("f-titulo").value=b.dataset.sugerencia;});
-  }
 
   function actualizarTipo(){
     const tipo = STATE.formTempTipo;
@@ -952,33 +798,10 @@ function bindForm(){
     $("bloque-titulo").classList.toggle("hidden", esCita || esCompra);
     $("bloque-cita").classList.toggle("hidden", !esCita);
     $("bloque-compra").classList.toggle("hidden", !esCompra);
-    $("bloque-evento").classList.toggle("hidden", tipo !== "evento");
     $("bloque-ubicacion").classList.toggle("hidden", esCita || esCompra);
     $("bloque-notas").classList.toggle("hidden", esCompra);
-    $("bloque-anticipacion").classList.toggle("hidden", esCompra);
     $("label-titulo").textContent = config.titulo;
     $("f-titulo").placeholder = config.placeholder;
-    $("label-ubicacion").textContent = config.ubicacion;
-    $("f-ubicacion").placeholder = config.ubicacionPlaceholder;
-    $("f-notas").placeholder = config.notasPlaceholder;
-    renderSugerencias(config);
-    actualizarModoCompra();
-  }
-
-  function actualizarModoCompra(){
-    const esCompra = STATE.formTempTipo === "compra";
-    $("bloque-fecha-hora").classList.toggle("hidden", esCompra && compraModo === "ahora");
-    if(esCompra){
-      $("label-fecha").textContent = "Fecha de envío";
-      $("label-hora").textContent = "Hora de envío";
-      $("f-avisar-whatsapp").checked = true;
-      $("f-avisar-whatsapp").disabled = true;
-      $("campo-telefono").classList.remove("hidden");
-    } else {
-      $("label-fecha").textContent = "Fecha";
-      $("label-hora").textContent = "Hora";
-      $("f-avisar-whatsapp").disabled = false;
-    }
   }
 
   function prepararFilaProducto(fila){
@@ -987,34 +810,20 @@ function bindForm(){
     const boton=fila.querySelector(".btn-eliminar-producto");
     if(boton) boton.onclick=()=>{
       const filas=document.querySelectorAll("#lista-compra-items .compra-item");
-      if(filas.length===1){
-        fila.querySelector(".f-producto").value="";
-        fila.querySelector(".f-producto").focus();
-      } else fila.remove();
+      if(filas.length===1){fila.querySelector(".f-producto").value="";}else{fila.remove();}
     };
   }
 
   function agregarProducto(){
     const fila=document.createElement("div");
     fila.className="compra-item flex items-center gap-2";
-    fila.innerHTML='<input class="input-field f-producto" placeholder="Ej: Leche" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg" aria-label="Eliminar producto">×</button>';
+    fila.innerHTML='<input class="input-field f-producto" placeholder="Ej: Pan" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg">×</button>';
     $("lista-compra-items").appendChild(fila);
     prepararFilaProducto(fila);
-    fila.querySelector(".f-producto").focus();
   }
 
   document.querySelectorAll("#lista-compra-items .compra-item").forEach(prepararFilaProducto);
-  ["f-titulo","f-centro-manual","f-especialidad-manual","f-medico","f-direccion","f-ubicacion","f-llevar","f-notas","p-nombre"].forEach(id=>{
-    const campo=$(id);
-    if(campo) campo.onblur=()=>{campo.value=normalizarTexto(campo.value);};
-  });
-  $("btn-agregar-producto").onclick=agregarProducto;
-  $("lista-compra-items").onkeydown=e=>{
-    if(e.key==="Enter"&&e.target.classList.contains("f-producto")){
-      e.preventDefault();
-      agregarProducto();
-    }
-  };
+  if($("btn-agregar-producto")) $("btn-agregar-producto").onclick = agregarProducto;
 
   document.querySelectorAll("#tipo-chips button").forEach(b=>{
     b.onclick=()=>{
@@ -1028,34 +837,10 @@ function bindForm(){
     b.onclick=()=>{
       compraModo=b.dataset.compraModo;
       document.querySelectorAll("#compra-modo-chips button").forEach(x=>x.className="chip"+(x===b?" chip-active":""));
-      actualizarModoCompra();
     };
   });
 
-  $("f-especialidad").onchange=()=>$("bloque-otra-especialidad").classList.toggle("hidden", $("f-especialidad").value!=="otra");
-
-  function toggleCanal(){
-    const checked=$("f-avisar-whatsapp").checked;
-    $("wrap-whatsapp").classList.toggle("border-mint-500/60",checked);
-    $("wrap-whatsapp").classList.toggle("bg-mint-500/10",checked);
-    $("campo-telefono").classList.toggle("hidden",!checked);
-  }
-  $("f-avisar-whatsapp").onchange=toggleCanal;
-
-  document.querySelectorAll("#anticipacion-chips button").forEach(b=>{
-    b.onclick=()=>{
-      if(b.id==="btn-ant-personalizada"){
-        const activar=!b.classList.contains("chip-active");
-        b.classList.toggle("chip-active",activar);
-        $("bloque-fecha-manual").classList.toggle("hidden",!activar);
-        if(!activar) anticipacionPersonalizada=undefined;
-      } else {
-        const horas=Number(b.dataset.ant);
-        if(anticipaciones.has(horas)) anticipaciones.delete(horas); else anticipaciones.add(horas);
-        b.classList.toggle("chip-active",anticipaciones.has(horas));
-      }
-    };
-  });
+  if($("f-especialidad")) $("f-especialidad").onchange=()=>$("bloque-otra-especialidad").classList.toggle("hidden", $("f-especialidad").value!=="otra");
 
   actualizarTipo();
 
@@ -1068,13 +853,13 @@ function bindForm(){
       const {data}=await sb.auth.getSession();
       STATE.user=data.session?.user||null;
     }
-    if(!STATE.user){mostrarError("Tu sesión se cerró. Vuelve a iniciar sesión.");return;}
+    if(!STATE.user){mostrarError("Sesión expirada.");return;}
 
     const tipo=STATE.formTempTipo;
     const esCompra=tipo==="compra";
     const esCita=tipo==="cita_medica";
-    let fecha=$("f-fecha").value;
-    let hora=$("f-hora").value;
+    let fecha=$("f-fecha")?.value || "";
+    let hora=$("f-hora")?.value || "";
 
     if(esCompra && compraModo==="ahora"){
       const ahora=new Date();
@@ -1082,36 +867,20 @@ function bindForm(){
       hora=`${String(ahora.getHours()).padStart(2,"0")}:${String(ahora.getMinutes()).padStart(2,"0")}`;
     }
 
-    const especialidad=normalizarTexto($("f-especialidad").value==="otra" ? $("f-especialidad-manual").value : $("f-especialidad").value);
-    const centro=normalizarTexto($("f-centro-manual").value);
+    const especialidad=normalizarTexto($("f-especialidad")?.value==="otra" ? $("f-especialidad-manual")?.value : $("f-especialidad")?.value);
+    const centro=normalizarTexto($("f-centro-manual")?.value);
     const listaCompra=[...document.querySelectorAll(".f-producto")].map(x=>normalizarTexto(x.value)).filter(Boolean).join("\n");
-    let titulo=esCita ? (especialidad?`Cita médica · ${especialidad}`:"Cita médica") : (esCompra?"🛒 Lista de compras":normalizarTexto($("f-titulo").value));
+    let titulo=esCita ? (especialidad?`Cita médica · ${especialidad}`:"Cita médica") : (esCompra?"🛒 Lista de compras":normalizarTexto($("f-titulo")?.value));
 
-    if(!fecha||!hora){mostrarError(esCompra?"Elige cuándo enviar la lista.":"Completa la fecha y la hora.");return;}
-    if(!esCita&&!esCompra&&!titulo){mostrarError("Escribe un título para el recordatorio.");return;}
-    if(esCita&&(!centro||!especialidad)){mostrarError("Completa el centro médico y la especialidad.");return;}
-    if(esCompra&&!listaCompra){mostrarError("Agrega al menos un producto a la lista.");return;}
+    if(!fecha||!hora){mostrarError("Completa la fecha y hora.");return;}
+    if(!esCita&&!esCompra&&!titulo){mostrarError("Escribe un título.");return;}
+    if(esCita&&(!centro||!especialidad)){mostrarError("Completa el centro médico y especialidad.");return;}
+    if(esCompra&&!listaCompra){mostrarError("Agrega al menos un producto.");return;}
 
-    const avisarWhatsapp=esCompra?true:$("f-avisar-whatsapp").checked;
     const destinatarios=[...document.querySelectorAll(".f-destinatario:checked")].map(x=>x.value);
-    if(avisarWhatsapp&&!destinatarios.length){mostrarError("Selecciona al menos un número de WhatsApp activo.");return;}
+    if(!destinatarios.length){mostrarError("Selecciona al menos un número de WhatsApp.");return;}
 
-    let horasAvisos=esCompra?[0]:[...anticipaciones];
-    if(!esCompra&&$("btn-ant-personalizada").classList.contains("chip-active")){
-      if(!$("f-fecha-aviso").value||!$("f-hora-aviso").value){mostrarError("Completa la fecha y hora exacta del aviso.");return;}
-      const fechaCita=new Date(`${fecha}T${hora}`);
-      const fechaAviso=new Date(`${$("f-fecha-aviso").value}T${$("f-hora-aviso").value}`);
-      const diffMs=fechaCita.getTime()-fechaAviso.getTime();
-      if(diffMs<0){mostrarError("El aviso no puede quedar después del recordatorio.");return;}
-      anticipacionPersonalizada=Math.max(0,Math.round(diffMs/(1000*60*60)));
-      horasAvisos.push(anticipacionPersonalizada);
-    }
-    horasAvisos=[...new Set(horasAvisos.map(Number))].sort((a,b)=>b-a);
-    if(!esCompra&&!horasAvisos.length){mostrarError("Selecciona al menos un momento para recibir el aviso.");return;}
-    const horasCalculadas=Math.max(...horasAvisos);
-
-    let notas=normalizarTexto($("f-notas").value)||null;
-    if(tipo==="evento"&&$("f-llevar").value.trim()) notas=`Llevar: ${normalizarTexto($("f-llevar").value)}${notas?`\n\n${notas}`:""}`;
+    let notas=normalizarTexto($("f-notas")?.value)||null;
     if(esCompra) notas=listaCompra;
 
     const payload={
@@ -1121,29 +890,37 @@ function bindForm(){
       centro_medico:esCita?centro:null,
       region:null,
       especialidad:esCita?especialidad:null,
-      medico:esCita?(normalizarTexto($("f-medico").value)||null):null,
-      numero_ficha:null,
-      direccion:esCita?(normalizarTexto($("f-direccion").value)||null):null,
-      ubicacion:(!esCita&&!esCompra)?(normalizarTexto($("f-ubicacion").value)||null):null,
+      medico:esCita?normalizarTexto($("f-medico")?.value):null,
+      direccion:esCita?normalizarTexto($("f-direccion")?.value):null,
+      ubicacion:(!esCita&&!esCompra)?normalizarTexto($("f-ubicacion")?.value):null,
       notas,
       avisar_email:false,
-      avisar_whatsapp:avisarWhatsapp,
-      email_aviso:null,
-      telefono_whatsapp:avisarWhatsapp?JSON.stringify(destinatarios):null,
-      anticipacion_horas:horasCalculadas,
+      avisar_whatsapp:true,
+      telefono_whatsapp:JSON.stringify(destinatarios),
+      anticipacion_horas:24,
       notificado:false
     };
-    payload.region=`__avisos:${JSON.stringify({todos:horasAvisos,enviados:[]})}`;
 
     $("form-submit").disabled=true;
-    $("form-submit").textContent="Guardando…";
+    $("form-submit").textContent="Guardando...";
     try{
-      const consulta=STATE.editId?sb.from("reminders").update(payload).eq("id",STATE.editId):sb.from("reminders").insert(payload);
-      const {error}=await consulta;
+      const consulta=STATE.editId?sb.from("reminders").update(payload).eq("id",STATE.editId):sb.from("reminders").insert(payload).select();
+      const {data, error}=await consulta;
       if(error) throw error;
+
+      // Si es compra inmediata, enviar por Green.API al instante
+      if(esCompra && compraModo==="ahora"){
+        const contactosObj = contactosWhatsApp(STATE.perfil).filter(c=>destinatarios.includes(c.id));
+        const recordatorioCreado = data?.[0] || payload;
+        const mensaje = construirMensaje(recordatorioCreado);
+        for(const dest of contactosObj){
+          await enviarWhatsAppGreenAPI(dest.telefono, mensaje);
+        }
+      }
+
       navigate("dashboard");
     }catch(err){
-      mostrarError(err?.message||"No se pudo guardar el recordatorio.");
+      mostrarError(err?.message||"No se pudo guardar.");
     }finally{
       $("form-submit").disabled=false;
       $("form-submit").textContent=STATE.editId?"Guardar cambios ✅":"Crear recordatorio 🔔";
@@ -1151,98 +928,147 @@ function bindForm(){
   };
 }
 
-
 /* ============================================================
-   11) PERFIL
+   11) PERFIL Y GESTIÓN DE CONTACTOS WHATSAPP
    ============================================================ */
-function viewPerfilLoading(){
-  return `<main class="min-h-screen pb-24 sm:pb-10">${navbar(false)}<div class="py-24 text-center text-sand/40">Cargando…</div></main>`;
-}
-async function bindPerfilLoad(){
-  const { data: perfil, error: perfilError } = await sb.from("profiles").select("nombre, telefono_whatsapp").eq("id", STATE.user.id).maybeSingle();
-  if(perfilError) console.error("Error cargando perfil:", perfilError);
-  STATE.perfil = perfil || {};
-  let contactos = contactosWhatsApp(STATE.perfil);
-  const nuevoContacto = () => ({id:(crypto.randomUUID?.() || `contacto-${Date.now()}-${Math.random().toString(16).slice(2)}`),nombre:"",telefono:"",activo:true});
-  const filaContacto = c => `
-    <div class="contacto-row rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3" data-id="${esc(c.id)}">
-      <div class="flex items-center justify-between gap-3"><p class="font-display text-sm font-semibold text-sand">Destinatario</p><label class="flex items-center gap-2 text-sm text-sand/60"><input type="checkbox" class="p-contacto-activo accent-mint-500" ${c.activo?'checked':''}/> Activo</label></div>
-      <div class="form-grid-2"><div><label class="label-field text-xs">Nombre</label><input class="input-field p-contacto-nombre" placeholder="Ej: Mamá" value="${esc(c.nombre)}" /></div><div><label class="label-field text-xs">Número de WhatsApp</label><input class="input-field p-contacto-telefono" placeholder="Ej: +56 9 1234 5678" value="${esc(c.telefono)}" /></div></div>
-      <button type="button" class="btn-ghost btn-eliminar-contacto !px-0 !py-1 text-coral-400">Eliminar número</button>
-    </div>`;
-  const app = document.getElementById("app");
-  app.innerHTML = `
+function viewPerfil(){
+  const perfil = STATE.perfil || {};
+  const nombre = perfil.nombre || STATE.user?.user_metadata?.nombre || "";
+  const contactos = contactosWhatsApp(perfil);
+  return `
   <main class="min-h-screen pb-24 sm:pb-10">
-    <header class="sticky top-0 z-30 border-b border-white/5 bg-ink-900/80 backdrop-blur-xl">
-      <div class="mx-auto flex max-w-2xl items-center gap-3 px-5 py-4">
-        <a href="#dashboard" class="btn-ghost !px-2 !py-2">←</a>
-        <p class="font-display text-sm font-semibold text-sand">Tu perfil 👤</p>
+    ${navbar(false)}
+    <div class="mx-auto max-w-3xl px-5 py-8">
+      <div class="mb-6 flex items-center justify-between">
+        <div>
+          <h1 class="font-display text-2xl font-bold text-sand">Mi perfil y WhatsApp</h1>
+          <p class="text-sm text-sand/50">Configura tus números para Green.API</p>
+        </div>
+        <a href="#dashboard" class="btn-secondary text-sm">← Volver</a>
       </div>
-    </header>
-    <div class="mx-auto max-w-2xl px-5 py-8">
-      <div class="card p-6 sm:p-8">
-        <p class="text-xs text-sand/40">Correo de la cuenta</p>
-        <p class="mt-1 font-display text-lg text-sand">${esc(STATE.user.email)}</p>
-        <form id="perfil-form" class="mt-6 space-y-5">
-          <div><label class="label-field">Nombre</label><input id="p-nombre" class="input-field" value="${esc(perfil?.nombre)}" /></div>
-          <div class="space-y-3"><div><p class="font-display font-semibold text-sand">Números de WhatsApp</p><p class="mt-1 text-xs text-sand/50">Los números desactivados no aparecerán al crear recordatorios ni recibirán avisos.</p></div><div id="lista-contactos" class="space-y-3">${contactos.map(filaContacto).join("")}</div><button type="button" id="btn-agregar-contacto" class="btn-secondary w-full">＋ Agregar número</button></div>
-          <div id="perfil-aviso" class="hidden rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400"></div>
+      <div class="card p-6 sm:p-8 space-y-6">
+        <form id="perfil-form" class="space-y-6">
+          <div>
+            <label class="label-field">Tu nombre</label>
+            <input id="p-nombre" class="input-field" value="${esc(nombre)}" placeholder="Ej: Juan Pérez" required />
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="label-field mb-0">Números de WhatsApp (Destinatarios)</label>
+              <button type="button" id="btn-agregar-contacto" class="btn-secondary !px-3 !py-1.5 text-xs">＋ Agregar número</button>
+            </div>
+            <div id="lista-contactos" class="space-y-4">
+              ${contactos.length ? contactos.map(filaContactoHTML).join("") : filaContactoHTML({id:"1", nombre:"Mi WhatsApp", telefono:"", activo:true})}
+            </div>
+          </div>
+          <div id="perfil-error" class="hidden rounded-xl bg-coral-500/10 px-4 py-3 text-sm text-coral-400"></div>
+          <div id="perfil-success" class="hidden rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400">¡Perfil guardado! ✨</div>
           <button type="submit" id="perfil-submit" class="btn-primary w-full">Guardar cambios</button>
         </form>
       </div>
-      <button id="perfil-logout" class="btn-secondary mt-6 w-full text-coral-400">Cerrar sesión</button>
     </div>
     ${bottomNav("perfil")}
   </main>`;
+}
 
-  const lista = document.getElementById("lista-contactos");
-  function enlazarFila(fila){
-    fila.querySelector(".btn-eliminar-contacto").onclick=()=>fila.remove();
+function filaContactoHTML(c){
+  return `
+    <div class="contacto-row rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3" data-id="${esc(c.id)}">
+      <div class="flex items-center justify-between gap-3">
+        <p class="font-display text-sm font-semibold text-sand">Destinatario</p>
+        <label class="flex items-center gap-2 text-sm text-sand/60 cursor-pointer">
+          <input type="checkbox" class="p-contacto-activo accent-mint-500" ${c.activo !== false ? 'checked' : ''}/> Activo
+        </label>
+      </div>
+      <div class="form-grid-2">
+        <div>
+          <label class="label-field text-xs">Nombre</label>
+          <input class="input-field p-contacto-nombre" placeholder="Ej: Yo" value="${esc(c.nombre)}" />
+        </div>
+        <div>
+          <label class="label-field text-xs">WhatsApp (con código de país)</label>
+          <input class="input-field p-contacto-telefono" placeholder="Ej: +56912345678" value="${esc(c.telefono)}" />
+        </div>
+      </div>
+      <button type="button" class="btn-ghost btn-eliminar-contacto !px-0 !py-1 text-coral-400 text-xs">Eliminar</button>
+    </div>`;
+}
+
+async function bindPerfilLoad(){
+  await asegurarPerfilCargado();
+  const app = document.getElementById("app");
+  app.innerHTML = viewPerfil();
+  
+  const $ = id => document.getElementById(id);
+  const listaContactos = $("lista-contactos");
+  
+  function prepararFila(fila){
+    const delBtn = fila.querySelector(".btn-eliminar-contacto");
+    delBtn.onclick = () => {
+      const filas = listaContactos.querySelectorAll(".contacto-row");
+      if(filas.length === 1){
+        fila.querySelector(".p-contacto-nombre").value = "";
+        fila.querySelector(".p-contacto-telefono").value = "";
+      } else {
+        fila.remove();
+      }
+    };
   }
-  lista.querySelectorAll(".contacto-row").forEach(enlazarFila);
-  document.getElementById("btn-agregar-contacto").onclick=()=>{
-    const contenedor=document.createElement("div");
-    contenedor.innerHTML=filaContacto(nuevoContacto());
-    const fila=contenedor.firstElementChild;
-    lista.appendChild(fila); enlazarFila(fila); fila.querySelector(".p-contacto-nombre").focus();
+  
+  listaContactos.querySelectorAll(".contacto-row").forEach(prepararFila);
+  
+  $("btn-agregar-contacto").onclick = () => {
+    const nuevo = { id: `contacto-${Date.now()}-${Math.random().toString(16).slice(2)}`, nombre: "", telefono: "", activo: true };
+    const div = document.createElement("div");
+    div.innerHTML = filaContactoHTML(nuevo);
+    const elem = div.firstElementChild;
+    listaContactos.appendChild(elem);
+    prepararFila(elem);
   };
-
-  document.getElementById("perfil-form").onsubmit = async (e)=>{
+  
+  $("perfil-form").onsubmit = async (e) => {
     e.preventDefault();
-    const btn = document.getElementById("perfil-submit");
-    btn.disabled = true; btn.textContent = "Guardando...";
-    const contactosGuardados=[...lista.querySelectorAll(".contacto-row")].map(fila=>({
-      id:fila.dataset.id,
-      nombre:normalizarTextoPresentacion(fila.querySelector(".p-contacto-nombre").value),
-      telefono:fila.querySelector(".p-contacto-telefono").value.trim(),
-      activo:fila.querySelector(".p-contacto-activo").checked
-    })).filter(c=>c.nombre||c.telefono);
-    const invalido=contactosGuardados.some(c=>!c.nombre||!c.telefono);
-    if(invalido){
-      const aviso=document.getElementById("perfil-aviso"); aviso.className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300"; aviso.textContent="⚠️ Completa nombre y número para cada contacto."; aviso.classList.remove("hidden"); btn.disabled=false; btn.textContent="Guardar cambios"; return;
-    }
-const { error: guardarError } = await sb.from("profiles").upsert({
-      id: STATE.user.id,
-      nombre: normalizarTextoPresentacion(document.getElementById("p-nombre").value),
-      telefono_whatsapp: JSON.stringify(contactosGuardados)
-    });
-    const aviso = document.getElementById("perfil-aviso");
-    aviso.classList.remove("hidden");
-    if(guardarError){
-      console.error("Error guardando perfil:", guardarError);
-      aviso.className = "rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-300";
-      aviso.textContent = "⚠️ No se pudo guardar: " + guardarError.message;
-    } else {
-      STATE.perfil = {
-        nombre: normalizarTextoPresentacion(document.getElementById("p-nombre").value),
-        telefono_whatsapp: JSON.stringify(contactosGuardados)
+    $("perfil-error").classList.add("hidden");
+    $("perfil-success").classList.add("hidden");
+    $("perfil-submit").disabled = true;
+    $("perfil-submit").textContent = "Guardando...";
+    
+    try {
+      const nombre = normalizarTextoPresentacion($("p-nombre").value.trim());
+      const filas = listaContactos.querySelectorAll(".contacto-row");
+      const contactosArray = [];
+      
+      filas.forEach(fila => {
+        const id = fila.dataset.id;
+        const nombreC = normalizarTextoPresentacion(fila.querySelector(".p-contacto-nombre").value.trim());
+        const telC = normalizarTelefono(fila.querySelector(".p-contacto-telefono").value.trim());
+        const activo = fila.querySelector(".p-contacto-activo").checked;
+        if(telC){
+          contactosArray.push({ id, nombre: nombreC || "WhatsApp", telefono: telC, activo });
+        }
+      });
+      
+      const payload = {
+        id: STATE.user.id,
+        nombre,
+        telefono_whatsapp: JSON.stringify(contactosArray),
+        updated_at: new Date().toISOString()
       };
-      aviso.className = "rounded-xl bg-mint-500/10 px-4 py-3 text-sm text-mint-400";
-      aviso.textContent = "Datos guardados ✅";
+      
+      const { error } = await sb.from("profiles").upsert(payload);
+      if(error) throw error;
+      
+      STATE.perfil = { nombre, telefono_whatsapp: JSON.stringify(contactosArray) };
+      $("perfil-success").classList.remove("hidden");
+      setTimeout(() => navigate("dashboard"), 1200);
+    } catch(err){
+      $("perfil-error").textContent = "⚠️ " + (err.message || "Error al guardar perfil");
+      $("perfil-error").classList.remove("hidden");
+    } finally {
+      $("perfil-submit").disabled = false;
+      $("perfil-submit").textContent = "Guardar cambios";
     }
-    btn.disabled = false; btn.textContent = "Guardar cambios";
   };
-  document.getElementById("perfil-logout").onclick = async ()=>{ await sb.auth.signOut(); STATE.perfil=null; navigate("landing"); };
 }
 </script>
 </body>

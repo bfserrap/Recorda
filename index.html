@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-<!-- Tailwind (CDN, sin build) -->
+<!-- Tailwind (CDN) -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
@@ -23,7 +23,7 @@
         fontFamily: { display:['Space Grotesk','sans-serif'], body:['Inter','sans-serif'] },
         borderRadius: { xl2:'1.5rem', xl3:'2rem' },
         boxShadow: {
-          glow:'0 0 0 1px rgba(47,227,174,0.15), 0 20px 60px -20px rgba(47,227,174,0.35)',
+          glow:'0 0 0 1px rgba(37,99,235,0.15), 0 20px 60px -20px rgba(37,99,235,0.35)',
           card:'0 10px 40px -15px rgba(0,0,0,0.5)'
         }
       }
@@ -65,9 +65,6 @@
   .chip-active{border-color:#2563eb;background:rgba(37,99,235,0.08);color:#2563eb;font-weight:600}
   @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
   .animate-float{animation:float 6s ease-in-out infinite}
-  .view{display:none}
-  .view.active{display:block}
-  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
   .grid > *{min-width:0}
   .form-grid-2{display:grid;grid-template-columns:1fr;gap:1rem}
   @media (min-width:640px){.form-grid-2{grid-template-columns:1fr 1fr}}
@@ -101,9 +98,8 @@
 const SUPABASE_URL = "https://soizfreqyjwishczfrmc.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_JLIsPY_j1xWfLgYtIKFZrw_CO15cFw8";
 
-// CONFIGURACIÓN DE GREEN.API CONSOLE
-const GREEN_API_ID_INSTANCE = "710722721815";     // Reemplaza con tu idInstance
-const GREEN_API_TOKEN_INSTANCE = "99c62a3228b744a18ab233b8dc39f83ba164b95a015f4075b8"; // Reemplaza con tu apiTokenInstance
+const GREEN_API_ID_INSTANCE = "710722721815";
+const GREEN_API_TOKEN_INSTANCE = "99c62a3228b744a18ab233b8dc39f83ba164b95a015f4075b8";
 const GREEN_API_URL = "https://7107.api.greenapi.com";
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -175,7 +171,23 @@ let STATE = {
   filtro: "todos",
   formTempTipo: "cita_medica",
   formManualCentro: false,
-  editId: null
+  editId: null,
+  formDraft: {
+    titulo: "",
+    fecha: "",
+    hora: "",
+    centro_medico: "",
+    especialidad: "",
+    medico: "",
+    direccion: "",
+    ubicacion: "",
+    notas: "",
+    anticipacion_horas: 24,
+    productos: [""],
+    destinatarios: [],
+    avisar_whatsapp: true,
+    compra_modo: "ahora"
+  }
 };
 
 function navigate(hash){ window.location.hash = hash; }
@@ -204,7 +216,6 @@ function normalizarTelefono(telefono){
   return limpio;
 }
 
-// Función para enviar WhatsApp usando Green.API Console
 async function enviarWhatsAppGreenAPI(telefono, mensaje){
   const limpio = normalizarTelefono(telefono);
   if(!limpio) throw new Error("Número de teléfono inválido");
@@ -225,11 +236,13 @@ async function enviarWhatsAppGreenAPI(telefono, mensaje){
 }
 
 function formatearFechaLarga(fecha){
+  if(!fecha) return "";
   const [y,m,d] = fecha.split("-").map(Number);
   const dt = new Date(y,m-1,d);
   return dt.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 }
 function formatearHora(hora){
+  if(!hora) return "";
   const [h,m] = hora.split(":").map(Number);
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
 }
@@ -258,7 +271,6 @@ function destinatariosRecordatorio(recordatorio, contactos = contactosWhatsApp()
   } catch(_) {}
   return bruto ? contactos.filter(c=>normalizarTelefono(c.telefono)===normalizarTelefono(bruto)) : [];
 }
-function contactosActivos(){ return contactosWhatsApp().filter(c=>c.activo); }
 
 function construirMensaje(r){
   const tipo = TIPO_LABELS[r.tipo] || TIPO_LABELS.otro;
@@ -286,13 +298,7 @@ function construirMensaje(r){
     }
   } else {
     if(r.ubicacion) partes.push(`📍 ${normalizarTextoPresentacion(r.ubicacion)}`);
-    if(r.tipo === "evento" && r.notas?.startsWith("Llevar:")){
-      const [llevar, ...resto] = r.notas.split("\n\n");
-      partes.push("", `🎒 *Para llevar:* ${normalizarTextoPresentacion(llevar.replace(/^Llevar:\s*/,""))}`);
-      if(resto.join("\n\n").trim()) partes.push(`📝 ${normalizarTextoPresentacion(resto.join("\n\n"))}`);
-    } else if(r.notas){
-      partes.push("", `📝 ${normalizarTextoPresentacion(r.notas)}`);
-    }
+    if(r.notas) partes.push("", `📝 ${normalizarTextoPresentacion(r.notas)}`);
   }
 
   if(r.tipo === "cita_medica" && r.notas) partes.push("", `📝 ${normalizarTextoPresentacion(r.notas)}`);
@@ -326,16 +332,57 @@ async function render(){
   if(hash==="landing") { app.innerHTML = viewLanding(); bindLanding(); return; }
   if(hash==="login") { app.innerHTML = viewLogin(); bindLogin(); return; }
   if(hash==="dashboard") { app.innerHTML = viewDashboardLoading(); await loadReminders(); app.innerHTML = viewDashboard(); bindDashboard(); return; }
-  if(hash==="nuevo") { await asegurarPerfilCargado(); STATE.editId=null; STATE.formTempTipo="cita_medica"; STATE.formManualCentro=false; app.innerHTML = viewForm(null); bindForm(); return; }
+  if(hash==="nuevo") {
+    await asegurarPerfilCargado();
+    STATE.editId = null;
+    STATE.formTempTipo = "cita_medica";
+    STATE.formDraft = {
+      titulo: "",
+      fecha: "",
+      hora: "",
+      centro_medico: "",
+      especialidad: "",
+      medico: "",
+      direccion: "",
+      ubicacion: "",
+      notas: "",
+      anticipacion_horas: 24,
+      productos: [""],
+      destinatarios: contactosWhatsApp().filter(c=>c.activo).map(c=>c.id),
+      avisar_whatsapp: true,
+      compra_modo: "ahora"
+    };
+    app.innerHTML = viewForm();
+    bindForm();
+    return;
+  }
   if(hash.startsWith("editar/")) {
     await asegurarPerfilCargado();
     const id = hash.split("/")[1];
     await loadReminders();
     const r = STATE.reminders.find(x=>x.id===id);
-    STATE.editId = id;
-    STATE.formTempTipo = r?.tipo || "cita_medica";
-    STATE.formManualCentro = !!r?.centro_medico && !CENTROS_MEDICOS_CHILE.some(reg=>reg.centros.some(c=>c.nombre===r.centro_medico));
-    app.innerHTML = viewForm(r);
+    if(r){
+      STATE.editId = id;
+      STATE.formTempTipo = r.tipo === "compra" ? "compra" : (r.tipo || "cita_medica");
+      const esCompra = r.tipo === "compra";
+      STATE.formDraft = {
+        titulo: r.titulo || "",
+        fecha: r.fecha || "",
+        hora: r.hora || "",
+        centro_medico: r.centro_medico || "",
+        especialidad: r.especialidad || "",
+        medico: r.medico || "",
+        direccion: r.direccion || "",
+        ubicacion: r.ubicacion || "",
+        notas: esCompra ? "" : (r.notas || ""),
+        anticipacion_horas: r.anticipacion_horas || 24,
+        productos: esCompra ? (r.notas || "").split("\n").map(x=>x.trim()).filter(Boolean) : [""],
+        destinatarios: destinatariosRecordatorio(r).map(c=>c.id),
+        avisar_whatsapp: r.avisar_whatsapp !== false,
+        compra_modo: "programada"
+      };
+    }
+    app.innerHTML = viewForm();
     bindForm();
     return;
   }
@@ -541,7 +588,6 @@ function viewDashboard(){
   const nombre = STATE.user?.user_metadata?.nombre || "";
   const ahora = Date.now();
   const proximos = STATE.reminders.filter(r => new Date(`${r.fecha}T${r.hora}`).getTime() >= ahora);
-  const pasados = STATE.reminders.filter(r => new Date(`${r.fecha}T${r.hora}`).getTime() < ahora);
   const filtrados = STATE.filtro==="todos" ? proximos : proximos.filter(r=>r.tipo===STATE.filtro);
   const en7dias = proximos.filter(r => (new Date(`${r.fecha}T${r.hora}`).getTime()-ahora)/(1000*60*60*24) <= 7).length;
   const citasMedicas = proximos.filter(r=>r.tipo==="cita_medica").length;
@@ -590,7 +636,7 @@ function viewDashboard(){
   </main>`;
 }
 function reminderCard(r){
-  const info = TIPO_LABELS[r.tipo];
+  const info = TIPO_LABELS[r.tipo] || TIPO_LABELS.otro;
   const cuenta = diasRestantes(r.fecha, r.hora);
   const anticipacionTxt = r.anticipacion_horas < 24 ? `${r.anticipacion_horas} h antes` : `${Math.round(r.anticipacion_horas/24)} día(s) antes`;
   const destinatarios = destinatariosRecordatorio(r);
@@ -622,7 +668,6 @@ function bindDashboard(){
     b.onclick = ()=>{ STATE.filtro = b.dataset.f; render(); };
   });
 
-  // Envío directo por Green.API desde la tarjeta
   document.querySelectorAll("[data-enviar-wa]").forEach(b=>{
     b.onclick = async ()=>{
       const id = b.dataset.enviarWa;
@@ -664,21 +709,16 @@ function bindDashboard(){
 /* ============================================================
    10) FORMULARIO: NUEVO / EDITAR
    ============================================================ */
-function viewForm(existing){
-  const esEdicion = !!existing;
-  const r = existing || {};
+function viewForm(){
+  const esEdicion = !!STATE.editId;
+  const d = STATE.formDraft;
   const contactos = contactosWhatsApp();
   const contactosDisponibles = contactos.filter(c=>c.activo);
-  const destinatariosIniciales = esEdicion ? destinatariosRecordatorio(r, contactos).map(c=>c.id) : contactosDisponibles.map(c=>c.id);
-  const especialidadConocida = ESPECIALIDADES_MEDICAS.includes(r.especialidad);
-  const notasEvento = r.tipo === "evento" && r.notas?.startsWith("Llevar:") ? r.notas.split("\n\n") : null;
-  const llevarDefault = notasEvento ? notasEvento[0].replace(/^Llevar:\s*/,"") : "";
-  const notasDefault = notasEvento ? notasEvento.slice(1).join("\n\n") : (r.tipo === "compra" ? "" : (r.notas || ""));
-  const productosCompra = r.tipo === "compra" ? (r.notas || "").split("\n").map(x=>x.trim()).filter(Boolean) : [""];
-  const estadoAvisos = String(r.region || "").startsWith("__avisos:") ? (()=>{try{return JSON.parse(String(r.region).slice(9));}catch{return null;}})() : null;
-  const avisosSeleccionados = estadoAvisos?.todos?.length ? estadoAvisos.todos.map(Number) : [Number(r.anticipacion_horas ?? 24)];
-  const avisoPersonalizado = avisosSeleccionados.find(h=>!ANTICIPACION_OPCIONES.some(o=>o.valor===h));
+  const especialidadConocida = ESPECIALIDADES_MEDICAS.includes(d.especialidad);
   const configInicial = FORM_CONFIG[STATE.formTempTipo] || FORM_CONFIG.otro;
+  const productosCompra = d.productos?.length ? d.productos : [""];
+  const antVal = Number(d.anticipacion_horas) || 24;
+  const esPresetAnt = [6, 24, 72, 168].includes(antVal);
 
   return `
   <main class="min-h-screen pb-24 sm:pb-10">
@@ -702,72 +742,83 @@ function viewForm(existing){
 
         <section id="bloque-titulo" class="${['cita_medica','compra'].includes(STATE.formTempTipo)?'hidden':''}">
           <label class="label-field" id="label-titulo">${configInicial.titulo}</label>
-          <input id="f-titulo" class="input-field" placeholder="${configInicial.placeholder}" value="${esc(r.titulo)}" />
-          <div id="sugerencias-titulo" class="mt-2 flex flex-wrap gap-2"></div>
+          <input id="f-titulo" class="input-field" placeholder="${configInicial.placeholder}" value="${esc(d.titulo)}" />
         </section>
 
         <section id="bloque-fecha-hora" class="form-grid-2">
-          <div><label class="label-field" id="label-fecha">Fecha</label><input id="f-fecha" type="date" class="input-field" value="${r.fecha||''}" /></div>
-          <div><label class="label-field" id="label-hora">Hora</label><input id="f-hora" type="time" class="input-field" value="${(r.hora||'').slice(0,5)}" /></div>
+          <div><label class="label-field" id="label-fecha">Fecha</label><input id="f-fecha" type="date" class="input-field" value="${esc(d.fecha)}" /></div>
+          <div><label class="label-field" id="label-hora">Hora</label><input id="f-hora" type="time" class="input-field" value="${esc(d.hora)}" /></div>
         </section>
 
         <section id="bloque-cita" class="card space-y-5 p-5 sm:p-6 ${STATE.formTempTipo!=='cita_medica'?'hidden':''}">
           <div><p class="font-display font-semibold text-sand">🩺 Detalles de la cita</p></div>
           <div>
             <label class="label-field">Centro médico o clínica</label>
-            <input id="f-centro-manual" class="input-field" placeholder="Ej: Clínica Dávila, Hospital…" value="${esc(r.centro_medico)}" />
+            <input id="f-centro-manual" class="input-field" placeholder="Ej: Clínica Dávila, Hospital…" value="${esc(d.centro_medico)}" />
           </div>
           <div>
             <label class="label-field">Especialidad</label>
             <select id="f-especialidad" class="input-field">
               <option value="">Selecciona una especialidad</option>
-              ${ESPECIALIDADES_MEDICAS.map(x=>`<option value="${esc(x)}" ${r.especialidad===x?'selected':''}>${esc(x)}</option>`).join("")}
-              <option value="otra" ${r.especialidad && !especialidadConocida?'selected':''}>Otra especialidad…</option>
+              ${ESPECIALIDADES_MEDICAS.map(x=>`<option value="${esc(x)}" ${d.especialidad===x?'selected':''}>${esc(x)}</option>`).join("")}
+              <option value="otra" ${d.especialidad && !especialidadConocida?'selected':''}>Otra especialidad…</option>
             </select>
-            <div id="bloque-otra-especialidad" class="mt-2 ${r.especialidad && !especialidadConocida?'':'hidden'}">
-              <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Medicina general" value="${r.especialidad && !especialidadConocida ? esc(r.especialidad) : ''}" />
+            <div id="bloque-otra-especialidad" class="mt-2 ${d.especialidad && !especialidadConocida?'':'hidden'}">
+              <input id="f-especialidad-manual" class="input-field" placeholder="Ej: Medicina general" value="${d.especialidad && !especialidadConocida ? esc(d.especialidad) : ''}" />
             </div>
           </div>
           <div class="form-grid-2">
-            <div><label class="label-field">Médico(a) <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-medico" class="input-field" placeholder="Dr. Juan Pérez" value="${esc(r.medico)}" /></div>
-            <div><label class="label-field">Dirección <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-direccion" class="input-field" placeholder="Av. Providencia 123" value="${esc(r.direccion)}" /></div>
+            <div><label class="label-field">Médico(a) <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-medico" class="input-field" placeholder="Dr. Juan Pérez" value="${esc(d.medico)}" /></div>
+            <div><label class="label-field">Dirección <span class="font-normal text-sand/40">(opcional)</span></label><input id="f-direccion" class="input-field" placeholder="Av. Providencia 123" value="${esc(d.direccion)}" /></div>
           </div>
         </section>
 
         <section id="bloque-ubicacion" class="${['cita_medica','compra'].includes(STATE.formTempTipo)?'hidden':''}">
           <label class="label-field" id="label-ubicacion">${configInicial.ubicacion}</label>
-          <input id="f-ubicacion" class="input-field" placeholder="${configInicial.ubicacionPlaceholder}" value="${esc(r.ubicacion)}" />
+          <input id="f-ubicacion" class="input-field" placeholder="${configInicial.ubicacionPlaceholder}" value="${esc(d.ubicacion)}" />
         </section>
 
         <section id="bloque-compra" class="card space-y-5 p-5 sm:p-6 ${STATE.formTempTipo==='compra'?'':'hidden'}">
           <div><p class="font-display font-semibold text-sand">🛒 Lista de compras</p></div>
           <div id="lista-compra-items" class="space-y-2">
-            ${(productosCompra.length?productosCompra:[""]).map(item=>`<div class="compra-item flex items-center gap-2"><input class="input-field f-producto" placeholder="Ej: Leche" value="${esc(item)}" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg">×</button></div>`).join("")}
+            ${productosCompra.map(item=>`<div class="compra-item flex items-center gap-2"><input class="input-field f-producto" placeholder="Ej: Leche" value="${esc(item)}" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg">×</button></div>`).join("")}
           </div>
           <button type="button" id="btn-agregar-producto" class="btn-secondary w-full sm:w-auto">＋ Agregar producto</button>
           <div>
             <label class="label-field">¿Cuándo enviarla?</label>
             <div class="flex flex-wrap gap-2" id="compra-modo-chips">
-              <button type="button" data-compra-modo="ahora" class="chip ${esEdicion?'':'chip-active'}">⚡ Enviar ahora por Green.API</button>
-              <button type="button" data-compra-modo="programada" class="chip ${esEdicion?'chip-active':''}">🗓️ Programar</button>
+              <button type="button" data-compra-modo="ahora" class="chip ${d.compra_modo==='ahora'?'chip-active':''}">⚡ Enviar ahora por Green.API</button>
+              <button type="button" data-compra-modo="programada" class="chip ${d.compra_modo==='programada'?'chip-active':''}">🗓️ Programar</button>
             </div>
+          </div>
+        </section>
+
+        <section id="bloque-anticipacion" class="card space-y-4 p-5 sm:p-6">
+          <div><p class="font-display font-semibold text-sand">⏰ Anticipación del recordatorio</p></div>
+          <div class="flex flex-wrap gap-2" id="anticipacion-chips">
+            ${ANTICIPACION_OPCIONES.map(opt=>`<button type="button" data-anticipacion="${opt.valor}" class="chip ${antVal===opt.valor?'chip-active':''}">${opt.label}</button>`).join("")}
+            <button type="button" data-anticipacion="personalizado" class="chip ${!esPresetAnt?'chip-active':''}">Personalizado</button>
+          </div>
+          <div id="bloque-anticipacion-personalizado" class="${!esPresetAnt?'':'hidden'} mt-3">
+            <label class="label-field">Horas antes del evento</label>
+            <input id="f-anticipacion-personalizada" type="number" min="1" class="input-field" placeholder="Ej: 12" value="${!esPresetAnt ? antVal : ''}" />
           </div>
         </section>
 
         <section id="bloque-notas" class="${STATE.formTempTipo==='compra'?'hidden':''}">
           <label class="label-field">Notas <span class="font-normal text-sand/40">(opcional)</span></label>
-          <textarea id="f-notas" class="input-field min-h-[100px]" placeholder="${configInicial.notasPlaceholder}">${esc(notasDefault)}</textarea>
+          <textarea id="f-notas" class="input-field min-h-[100px]" placeholder="${configInicial.notasPlaceholder}">${esc(d.notas)}</textarea>
         </section>
 
         <section class="card space-y-5 p-5">
           <div><p class="font-display font-semibold text-sand">📲 Destinatarios WhatsApp (Green.API)</p></div>
-          <label id="wrap-whatsapp" class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition border-mint-500/60 bg-mint-500/10">
-            <input type="checkbox" id="f-avisar-whatsapp" class="mt-1 accent-mint-500" checked />
+          <label class="flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition border-mint-500/60 bg-mint-500/10">
+            <input type="checkbox" id="f-avisar-whatsapp" class="mt-1 accent-mint-500" ${d.avisar_whatsapp?'checked':''} />
             <span><span class="block font-medium text-sand">Enviar notificación vía WhatsApp</span></span>
           </label>
           <div id="campo-telefono" class="space-y-2">
             <label class="label-field">Selecciona los números</label>
-            ${contactosDisponibles.length ? contactosDisponibles.map(c=>`<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><input type="checkbox" class="f-destinatario accent-mint-500" value="${esc(c.id)}" ${destinatariosIniciales.includes(c.id)?'checked':''} /><span class="min-w-0"><span class="block font-medium text-sand">${esc(c.nombre)}</span><span class="block text-xs text-sand/50">${esc(c.telefono)}</span></span></label>`).join("") : `<div class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">No tienes números activos. Agrégalos en tu perfil.</div>`}
+            ${contactosDisponibles.length ? contactosDisponibles.map(c=>`<label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><input type="checkbox" class="f-destinatario accent-mint-500" value="${esc(c.id)}" ${d.destinatarios.includes(c.id)?'checked':''} /><span class="min-w-0"><span class="block font-medium text-sand">${esc(c.nombre)}</span><span class="block text-xs text-sand/50">${esc(c.telefono)}</span></span></label>`).join("") : `<div class="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">No tienes números activos. Agrégalos en tu perfil.</div>`}
             <a href="#perfil" class="btn-ghost !px-0 !py-1 text-sm">⚙️ Administrar números</a>
           </div>
         </section>
@@ -780,6 +831,38 @@ function viewForm(existing){
   </main>`;
 }
 
+function sincronizarDraftFormulario(){
+  const d = STATE.formDraft;
+  const fTitulo = document.getElementById("f-titulo");
+  const fFecha = document.getElementById("f-fecha");
+  const fHora = document.getElementById("f-hora");
+  const fCentro = document.getElementById("f-centro-manual");
+  const fEsp = document.getElementById("f-especialidad");
+  const fEspMan = document.getElementById("f-especialidad-manual");
+  const fMed = document.getElementById("f-medico");
+  const fDir = document.getElementById("f-direccion");
+  const fUbi = document.getElementById("f-ubicacion");
+  const fNotas = document.getElementById("f-notas");
+  const fAvisarWa = document.getElementById("f-avisar-whatsapp");
+
+  if(fTitulo) d.titulo = fTitulo.value;
+  if(fFecha) d.fecha = fFecha.value;
+  if(fHora) d.hora = fHora.value;
+  if(fCentro) d.centro_medico = fCentro.value;
+  if(fEsp){
+    d.especialidad = fEsp.value === "otra" ? (fEspMan ? fEspMan.value : "") : fEsp.value;
+  }
+  if(fMed) d.medico = fMed.value;
+  if(fDir) d.direccion = fDir.value;
+  if(fUbi) d.ubicacion = fUbi.value;
+  if(fNotas) d.notas = fNotas.value;
+  if(fAvisarWa) d.avisar_whatsapp = fAvisarWa.checked;
+
+  d.productos = [...document.querySelectorAll(".f-producto")].map(x=>x.value).filter(Boolean);
+  if(d.productos.length === 0) d.productos = [""];
+  d.destinatarios = [...document.querySelectorAll(".f-destinatario:checked")].map(x=>x.value);
+}
+
 function bindForm(){
   const $ = id => document.getElementById(id);
   const normalizarTexto = valor => String(valor || "").split("\n").map(linea=>{
@@ -788,9 +871,7 @@ function bindForm(){
     return limpio.charAt(0).toLocaleUpperCase("es-CL")+limpio.slice(1).toLocaleLowerCase("es-CL");
   }).join("\n");
 
-  let compraModo = STATE.editId ? "programada" : "ahora";
-
-  function actualizarTipo(){
+  function actualizarTipoForm(){
     const tipo = STATE.formTempTipo;
     const config = FORM_CONFIG[tipo] || FORM_CONFIG.otro;
     const esCita = tipo === "cita_medica";
@@ -805,111 +886,148 @@ function bindForm(){
   }
 
   function prepararFilaProducto(fila){
-    const campo=fila.querySelector(".f-producto");
-    campo.onblur=()=>{campo.value=normalizarTexto(campo.value);};
-    const boton=fila.querySelector(".btn-eliminar-producto");
-    if(boton) boton.onclick=()=>{
-      const filas=document.querySelectorAll("#lista-compra-items .compra-item");
-      if(filas.length===1){fila.querySelector(".f-producto").value="";}else{fila.remove();}
+    const campo = fila.querySelector(".f-producto");
+    campo.onblur = () => { campo.value = normalizarTexto(campo.value); sincronizarDraftFormulario(); };
+    campo.oninput = sincronizarDraftFormulario;
+    const boton = fila.querySelector(".btn-eliminar-producto");
+    if(boton) boton.onclick = () => {
+      const filas = document.querySelectorAll("#lista-compra-items .compra-item");
+      if(filas.length === 1){ fila.querySelector(".f-producto").value = ""; } else { fila.remove(); }
+      sincronizarDraftFormulario();
     };
   }
 
   function agregarProducto(){
-    const fila=document.createElement("div");
-    fila.className="compra-item flex items-center gap-2";
-    fila.innerHTML='<input class="input-field f-producto" placeholder="Ej: Pan" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg">×</button>';
+    const fila = document.createElement("div");
+    fila.className = "compra-item flex items-center gap-2";
+    fila.innerHTML = '<input class="input-field f-producto" placeholder="Ej: Pan" /><button type="button" class="btn-eliminar-producto btn-ghost !px-3 !py-2 text-lg">×</button>';
     $("lista-compra-items").appendChild(fila);
     prepararFilaProducto(fila);
+    sincronizarDraftFormulario();
   }
 
   document.querySelectorAll("#lista-compra-items .compra-item").forEach(prepararFilaProducto);
   if($("btn-agregar-producto")) $("btn-agregar-producto").onclick = agregarProducto;
 
   document.querySelectorAll("#tipo-chips button").forEach(b=>{
-    b.onclick=()=>{
-      STATE.formTempTipo=b.dataset.tipo;
+    b.onclick = () => {
+      sincronizarDraftFormulario();
+      STATE.formTempTipo = b.dataset.tipo;
       document.querySelectorAll("#tipo-chips button").forEach(x=>x.className="chip"+(x===b?" chip-active":""));
-      actualizarTipo();
+      actualizarTipoForm();
     };
   });
 
   document.querySelectorAll("#compra-modo-chips button").forEach(b=>{
-    b.onclick=()=>{
-      compraModo=b.dataset.compraModo;
+    b.onclick = () => {
+      STATE.formDraft.compra_modo = b.dataset.compraModo;
       document.querySelectorAll("#compra-modo-chips button").forEach(x=>x.className="chip"+(x===b?" chip-active":""));
     };
   });
 
-  if($("f-especialidad")) $("f-especialidad").onchange=()=>$("bloque-otra-especialidad").classList.toggle("hidden", $("f-especialidad").value!=="otra");
+  document.querySelectorAll("#anticipacion-chips button").forEach(b=>{
+    b.onclick = () => {
+      sincronizarDraftFormulario();
+      const val = b.dataset.anticipacion;
+      if(val === "personalizado"){
+        const persInput = $("f-anticipacion-personalizada");
+        STATE.formDraft.anticipacion_horas = Number(persInput?.value) || 12;
+      } else {
+        STATE.formDraft.anticipacion_horas = Number(val);
+      }
+      document.querySelectorAll("#anticipacion-chips button").forEach(x=>x.className="chip"+(x===b?" chip-active":""));
+      $("bloque-anticipacion-personalizado").classList.toggle("hidden", val !== "personalizado");
+    };
+  });
 
-  actualizarTipo();
+  const persInput = $("f-anticipacion-personalizada");
+  if(persInput){
+    persInput.oninput = () => {
+      STATE.formDraft.anticipacion_horas = Number(persInput.value) || 24;
+    };
+  }
 
-  $("reminder-form").onsubmit=async(e)=>{
+  if($("f-especialidad")) {
+    $("f-especialidad").onchange = () => {
+      $("bloque-otra-especialidad").classList.toggle("hidden", $("f-especialidad").value!=="otra");
+      sincronizarDraftFormulario();
+    };
+  }
+
+  // Bind input changes to keep draft updated live
+  document.querySelectorAll("#reminder-form input, #reminder-form textarea, #reminder-form select").forEach(el=>{
+    el.oninput = sincronizarDraftFormulario;
+    el.onchange = sincronizarDraftFormulario;
+  });
+
+  actualizarTipoForm();
+
+  $("reminder-form").onsubmit = async (e) => {
     e.preventDefault();
+    sincronizarDraftFormulario();
     $("form-error").classList.add("hidden");
-    const mostrarError=msg=>{$("form-error").textContent="⚠️ "+msg;$("form-error").classList.remove("hidden");};
+    const mostrarError = msg => { $("form-error").textContent = "⚠️ " + msg; $("form-error").classList.remove("hidden"); };
 
     if(!STATE.user){
-      const {data}=await sb.auth.getSession();
-      STATE.user=data.session?.user||null;
+      const { data } = await sb.auth.getSession();
+      STATE.user = data.session?.user || null;
     }
-    if(!STATE.user){mostrarError("Sesión expirada.");return;}
+    if(!STATE.user){ mostrarError("Sesión expirada."); return; }
 
-    const tipo=STATE.formTempTipo;
-    const esCompra=tipo==="compra";
-    const esCita=tipo==="cita_medica";
-    let fecha=$("f-fecha")?.value || "";
-    let hora=$("f-hora")?.value || "";
+    const tipo = STATE.formTempTipo;
+    const esCompra = tipo === "compra";
+    const esCita = tipo === "cita_medica";
+    let fecha = STATE.formDraft.fecha;
+    let hora = STATE.formDraft.hora;
 
-    if(esCompra && compraModo==="ahora"){
-      const ahora=new Date();
-      fecha=`${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,"0")}-${String(ahora.getDate()).padStart(2,"0")}`;
-      hora=`${String(ahora.getHours()).padStart(2,"0")}:${String(ahora.getMinutes()).padStart(2,"0")}`;
+    if(esCompra && STATE.formDraft.compra_modo === "ahora"){
+      const ahora = new Date();
+      fecha = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,"0")}-${String(ahora.getDate()).padStart(2,"0")}`;
+      hora = `${String(ahora.getHours()).padStart(2,"0")}:${String(ahora.getMinutes()).padStart(2,"0")}`;
     }
 
-    const especialidad=normalizarTexto($("f-especialidad")?.value==="otra" ? $("f-especialidad-manual")?.value : $("f-especialidad")?.value);
-    const centro=normalizarTexto($("f-centro-manual")?.value);
-    const listaCompra=[...document.querySelectorAll(".f-producto")].map(x=>normalizarTexto(x.value)).filter(Boolean).join("\n");
-    let titulo=esCita ? (especialidad?`Cita médica · ${especialidad}`:"Cita médica") : (esCompra?"🛒 Lista de compras":normalizarTexto($("f-titulo")?.value));
+    const especialidad = normalizarTexto(STATE.formDraft.especialidad);
+    const centro = normalizarTexto(STATE.formDraft.centro_medico);
+    const listaCompra = STATE.formDraft.productos.filter(Boolean).join("\n");
+    let titulo = esCita ? (especialidad ? `Cita médica · ${especialidad}` : "Cita médica") : (esCompra ? "🛒 Lista de compras" : normalizarTexto(STATE.formDraft.titulo));
 
-    if(!fecha||!hora){mostrarError("Completa la fecha y hora.");return;}
-    if(!esCita&&!esCompra&&!titulo){mostrarError("Escribe un título.");return;}
-    if(esCita&&(!centro||!especialidad)){mostrarError("Completa el centro médico y especialidad.");return;}
-    if(esCompra&&!listaCompra){mostrarError("Agrega al menos un producto.");return;}
+    if(!fecha || !hora){ mostrarError("Completa la fecha y hora."); return; }
+    if(!esCita && !esCompra && !titulo){ mostrarError("Escribe un título."); return; }
+    if(esCita && (!centro || !especialidad)){ mostrarError("Completa el centro médico y especialidad."); return; }
+    if(esCompra && !listaCompra){ mostrarError("Agrega al menos un producto."); return; }
 
-    const destinatarios=[...document.querySelectorAll(".f-destinatario:checked")].map(x=>x.value);
-    if(!destinatarios.length){mostrarError("Selecciona al menos un número de WhatsApp.");return;}
+    const destinatarios = STATE.formDraft.destinatarios;
+    if(!destinatarios.length){ mostrarError("Selecciona al menos un número de WhatsApp."); return; }
 
-    let notas=normalizarTexto($("f-notas")?.value)||null;
-    if(esCompra) notas=listaCompra;
+    let notas = normalizarTexto(STATE.formDraft.notas) || null;
+    if(esCompra) notas = listaCompra;
 
-    const payload={
-      user_id:STATE.user.id,
-      tipo:esCompra?"otro":tipo,
-      titulo,fecha,hora,
-      centro_medico:esCita?centro:null,
-      region:null,
-      especialidad:esCita?especialidad:null,
-      medico:esCita?normalizarTexto($("f-medico")?.value):null,
-      direccion:esCita?normalizarTexto($("f-direccion")?.value):null,
-      ubicacion:(!esCita&&!esCompra)?normalizarTexto($("f-ubicacion")?.value):null,
+    const payload = {
+      user_id: STATE.user.id,
+      tipo: esCompra ? "otro" : tipo,
+      titulo, fecha, hora,
+      centro_medico: esCita ? centro : null,
+      region: null,
+      especialidad: esCita ? especialidad : null,
+      medico: esCita ? normalizarTexto(STATE.formDraft.medico) : null,
+      direccion: esCita ? normalizarTexto(STATE.formDraft.direccion) : null,
+      ubicacion: (!esCita && !esCompra) ? normalizarTexto(STATE.formDraft.ubicacion) : null,
       notas,
-      avisar_email:false,
-      avisar_whatsapp:true,
-      telefono_whatsapp:JSON.stringify(destinatarios),
-      anticipacion_horas:24,
-      notificado:false
+      avisar_email: false,
+      avisar_whatsapp: STATE.formDraft.avisar_whatsapp,
+      telefono_whatsapp: JSON.stringify(destinatarios),
+      anticipacion_horas: Number(STATE.formDraft.anticipacion_horas) || 24,
+      notificado: false
     };
 
-    $("form-submit").disabled=true;
-    $("form-submit").textContent="Guardando...";
-    try{
-      const consulta=STATE.editId?sb.from("reminders").update(payload).eq("id",STATE.editId):sb.from("reminders").insert(payload).select();
-      const {data, error}=await consulta;
+    $("form-submit").disabled = true;
+    $("form-submit").textContent = "Guardando...";
+    try {
+      const consulta = STATE.editId ? sb.from("reminders").update(payload).eq("id", STATE.editId) : sb.from("reminders").insert(payload).select();
+      const { data, error } = await consulta;
       if(error) throw error;
 
-      // Si es compra inmediata, enviar por Green.API al instante
-      if(esCompra && compraModo==="ahora"){
+      if(esCompra && STATE.formDraft.compra_modo === "ahora"){
         const contactosObj = contactosWhatsApp(STATE.perfil).filter(c=>destinatarios.includes(c.id));
         const recordatorioCreado = data?.[0] || payload;
         const mensaje = construirMensaje(recordatorioCreado);
@@ -919,11 +1037,11 @@ function bindForm(){
       }
 
       navigate("dashboard");
-    }catch(err){
-      mostrarError(err?.message||"No se pudo guardar.");
-    }finally{
-      $("form-submit").disabled=false;
-      $("form-submit").textContent=STATE.editId?"Guardar cambios ✅":"Crear recordatorio 🔔";
+    } catch(err){
+      mostrarError(err?.message || "No se pudo guardar.");
+    } finally {
+      $("form-submit").disabled = false;
+      $("form-submit").textContent = STATE.editId ? "Guardar cambios ✅" : "Crear recordatorio 🔔";
     }
   };
 }

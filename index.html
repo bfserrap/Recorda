@@ -1010,10 +1010,50 @@ function bindForm(){
   });
 
   function renderAnticipacionCustomList(){
-    sincronizarAnticipacionesForm();
     const customItems = STATE.formDraft.anticipaciones.filter(x => x.tipo === 'custom');
     const container = $("lista-anticipacion-custom");
     if(!container) return;
+
+    if(customItems.length === 0){
+      container.innerHTML = `<p class="text-xs text-sand/40 italic">No hay recordatorios personalizados agregados. Haz clic en "Agregar personalizado" si deseas configurar avisos en fechas y horas exactas.</p>`;
+      return;
+    }
+
+    container.innerHTML = customItems.map((custom, idx) => `
+      <div class="anticipacion-custom-row rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3" data-index="${idx}">
+        <div class="flex items-center justify-between">
+          <span class="font-display text-xs font-semibold text-sand">Personalizado #${idx+1}</span>
+          <button type="button" class="btn-ghost btn-eliminar-anticipacion-custom !px-0 !py-1 text-coral-400 text-xs">Eliminar</button>
+        </div>
+        <div class="form-grid-2">
+          <div>
+            <label class="label-field text-xs">Fecha que debe sonar</label>
+            <input type="date" class="input-field f-custom-fecha" value="${esc(custom.fecha)}" />
+          </div>
+          <div>
+            <label class="label-field text-xs">Hora que debe sonar</label>
+            <input type="time" class="input-field f-custom-hora" value="${esc(custom.hora)}" />
+          </div>
+        </div>
+      </div>
+    `).join("");
+
+    container.querySelectorAll(".anticipacion-custom-row").forEach(row => {
+      row.querySelector(".btn-eliminar-anticipacion-custom").onclick = () => {
+        const idx = Number(row.dataset.index);
+        let customs = STATE.formDraft.anticipaciones.filter(x => x.tipo === 'custom');
+        customs.splice(idx, 1);
+        const presets = STATE.formDraft.anticipaciones.filter(x => x.tipo === 'preset');
+        STATE.formDraft.anticipaciones = [...presets, ...customs];
+        renderAnticipacionCustomList();
+      };
+      row.querySelectorAll("input").forEach(inp => {
+        inp.oninput = sincronizarAnticipacionesForm;
+        inp.onchange = sincronizarAnticipacionesForm;
+      });
+    });
+  }
+```[cite: 5]
 
     if(customItems.length === 0){
       container.innerHTML = `<p class="text-xs text-sand/40 italic">No hay recordatorios personalizados agregados. Haz clic en "Agregar personalizado" si deseas configurar avisos en fechas y horas exactas.</p>`;
